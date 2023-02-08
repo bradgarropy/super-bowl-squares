@@ -6,7 +6,13 @@ import {metaArgs} from "~/utils/testUtils"
 
 test("renders", () => {
     render(<IndexRoute />)
-    expect(screen.getByText("Home"))
+
+    expect(screen.getByLabelText("Home Team"))
+    expect(screen.getByLabelText("Away Team"))
+    expect(screen.getByLabelText("Name"))
+
+    expect(screen.getByText("generate"))
+    expect(screen.getByText("add"))
 })
 
 test("meta", () => {

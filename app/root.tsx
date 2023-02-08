@@ -37,7 +37,7 @@ const App = () => {
                 <Links />
             </head>
 
-            <body className="bg-remix-black text-white">
+            <body className="bg-green-800 text-white">
                 <div className="min-h-screen grid grid-rows-layout">
                     <Header />
 

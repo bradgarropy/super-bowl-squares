@@ -1,27 +1,53 @@
 import arrayShuffle from "array-shuffle"
 
-type Entries = Record<string, number>
-type Square = string
-type Name = string
+type Participants = Record<string, Participant>
 
-const assignSquares = (names: Name[]): Square[] => {
+type Participant = {
+    name: string
+    initials: string
+    entries: number
+}
+
+const getInitials = (name: string): string => {
+    const pieces = name.split(" ")
+
+    const initials = pieces
+        .map(piece => {
+            return piece[0].toUpperCase()
+        })
+        .join("")
+
+    return initials
+}
+
+const assignSquares = (names: string[]): string[] => {
     const squaresPerName = Math.floor(100 / names.length)
     const remainingSquares = 100 % names.length
     const remainingNames = arrayShuffle(names).slice(0, remainingSquares)
 
-    const entries = names.reduce<Entries>((entries, name) => {
-        entries[name] = squaresPerName
-
-        if (remainingNames.includes(name)) {
-            entries[name] += 1
+    const participants = names.reduce<Participants>((participant, name) => {
+        participant[name] = {
+            name,
+            initials: getInitials(name),
+            entries: squaresPerName,
         }
 
-        return entries
+        if (remainingNames.includes(name)) {
+            participant[name].entries += 1
+        }
+
+        return participant
     }, {})
 
+    console.log(participants)
+
     const squares = names.flatMap(name => {
-        return new Array(entries[name]).fill(name)
+        return new Array(participants[name].entries).fill(
+            participants[name].initials,
+        )
     })
+
+    console.log(squares)
 
     return arrayShuffle(squares)
 }
