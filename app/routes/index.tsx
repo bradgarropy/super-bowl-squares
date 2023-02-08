@@ -1,47 +1,41 @@
 import {XMarkIcon} from "@heroicons/react/24/solid"
 import type {MetaFunction} from "@remix-run/node"
+import {json} from "@remix-run/node"
+import {useLoaderData} from "@remix-run/react"
 import type {FormEventHandler} from "react"
 import {useRef, useState} from "react"
 
 import {assignSquares} from "~/utils/assign"
-import {teams} from "~/utils/nfl"
+import {getSuperBowl} from "~/utils/espn"
 
 const meta: MetaFunction = () => ({
     title: "💿 remix starter | home",
 })
 
+const loader = async () => {
+    const superBowl = await getSuperBowl()
+    return json(superBowl)
+}
+
 const IndexRoute = () => {
+    const superBowl = useLoaderData<typeof loader>()
+
     const [name, setName] = useState<string>("")
     const [names, setNames] = useState<string[]>([])
     const [squares, setSquares] = useState<string[]>([])
-    const [homeTeam, setHomeTeam] = useState<string>()
-    const [awayTeam, setAwayTeam] = useState<string>()
 
     const nameRef = useRef<HTMLInputElement>(null)
-
-    const handleGenerate: FormEventHandler<HTMLFormElement> = event => {
-        event.preventDefault()
-
-        const formData = new FormData(event.currentTarget)
-
-        const rawNames = formData.get("names") as string
-        const names = rawNames.split(",").map(name => name.trim())
-
-        const newSquares = assignSquares(names)
-        setSquares(newSquares)
-
-        const newHomeTeam = formData.get("homeTeam") as string
-        const newAwayTeam = formData.get("awayTeam") as string
-
-        setHomeTeam(newHomeTeam)
-        setAwayTeam(newAwayTeam)
-    }
 
     const handleAddName: FormEventHandler<HTMLFormElement> = event => {
         event.preventDefault()
 
-        setNames([...names, name])
+        const newNames = [...names, name]
+        const newSquares = assignSquares(newNames)
+
+        setNames(newNames)
         setName("")
+        setSquares(newSquares)
+
         nameRef.current?.focus()
     }
 
@@ -53,54 +47,6 @@ const IndexRoute = () => {
 
     return (
         <>
-            <form onSubmit={handleGenerate} className="mb-12">
-                <div className="grid grid-flow-col justify-center gap-x-8 items-end mb-12">
-                    <div className="grid">
-                        <label htmlFor="homeTeam" className="font-bold mr-2">
-                            Home Team
-                        </label>
-
-                        <select
-                            name="homeTeam"
-                            id="homeTeam"
-                            className="text-black p-2"
-                        >
-                            {teams.map(team => {
-                                return (
-                                    <option key={team} value={team}>
-                                        {team}
-                                    </option>
-                                )
-                            })}
-                        </select>
-                    </div>
-
-                    <span className="font-extrabold italic text-4xl">vs</span>
-
-                    <div className="grid">
-                        <label htmlFor="awayTeam" className="font-bold mr-2">
-                            Away Team
-                        </label>
-
-                        <select
-                            name="awayTeam"
-                            id="awayTeam"
-                            className="text-black p-2"
-                        >
-                            {teams.map(team => {
-                                return (
-                                    <option key={team} value={team}>
-                                        {team}
-                                    </option>
-                                )
-                            })}
-                        </select>
-                    </div>
-                </div>
-
-                <button type="submit">generate</button>
-            </form>
-
             <form onSubmit={handleAddName} className="mb-12">
                 <label htmlFor="name" className="font-bold mr-2">
                     Name
@@ -135,15 +81,31 @@ const IndexRoute = () => {
 
             <div className="grid grid-cols-squares grid-rows-squares border-white border-4 tabular-nums bg-white text-center mt-12">
                 {/* empty */}
-                <span className="col-start-1 row-start-1 bg-gray-600"></span>
-                <span className="col-start-1 row-start-2 bg-gray-600"></span>
-                <span className="col-start-2 row-start-1 bg-gray-600"></span>
+                <span
+                    style={{
+                        background: `linear-gradient(45deg, #${superBowl.teams.away.color} 50%, #${superBowl.teams.home.color} 50%)`,
+                    }}
+                    className="col-start-1 row-start-1"
+                ></span>
                 <span className="col-start-2 row-start-2 bg-gray-400"></span>
 
                 {/* horizontal header */}
-                <span className="col-start-3 row-start-1 col-span-10 p-4 font-extrabold bg-gray-600">
-                    {homeTeam ?? "Home Team"}
-                </span>
+                <div
+                    style={{backgroundColor: `#${superBowl.teams.home.color}`}}
+                    className={
+                        "col-start-2 row-start-1 col-span-11 p-4 font-extrabold grid grid-flow-col gap-x-2 justify-center items-center"
+                    }
+                >
+                    <img
+                        src={superBowl.teams.home.logo}
+                        alt={superBowl.teams.home.name}
+                        width="500"
+                        height="500"
+                        className="w-10"
+                    />
+
+                    <span>{superBowl.teams.home.name}</span>
+                </div>
 
                 <span className="col-start-3 row-start-2 bg-gray-400 text-black p-2 font-bold">
                     0
@@ -186,9 +148,22 @@ const IndexRoute = () => {
                 })}
 
                 {/* vertical header */}
-                <span className="col-start-1 row-start-3 row-span-10 p-4 font-extrabold rotate-180 [writing-mode:_vertical-lr] bg-gray-600">
-                    {awayTeam ?? "Away Team"}
-                </span>
+                <div
+                    style={{backgroundColor: `#${superBowl.teams.away.color}`}}
+                    className="col-start-1 row-start-2 row-span-11 p-4 font-extrabold [writing-mode:_vertical-lr] bg-gray-600 grid grid-flow-col gap-x-2 justify-center items-center"
+                >
+                    <span className="rotate-180">
+                        {superBowl.teams.away.name}
+                    </span>
+
+                    <img
+                        src={superBowl.teams.away.logo}
+                        alt={superBowl.teams.away.name}
+                        width="500"
+                        height="500"
+                        className="w-10 -rotate-90"
+                    />
+                </div>
 
                 <span className="col-start-2 row-start-3 bg-gray-400 text-black p-2 font-bold">
                     0
@@ -226,4 +201,4 @@ const IndexRoute = () => {
 }
 
 export default IndexRoute
-export {meta}
+export {loader, meta}
