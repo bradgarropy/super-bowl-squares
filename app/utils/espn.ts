@@ -51,3 +51,4 @@ const getSuperBowl = async (): Promise<SuperBowl> => {
 }
 
 export {getSuperBowl}
+export type {SuperBowl, Team}

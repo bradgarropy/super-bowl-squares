@@ -30,11 +30,11 @@ const config = {
                 12: "12",
             },
             gridTemplateColumns: {
-                squares: "repeat(2, auto) repeat(10, 1fr)",
+                squares: "repeat(12, 5rem)",
             },
             gridTemplateRows: {
                 layout: "auto 1fr auto",
-                squares: "repeat(2, auto) repeat(10, 1fr)",
+                squares: "repeat(12, 5rem)",
                 7: "repeat(7, minmax(0, 1fr))",
                 8: "repeat(8, minmax(0, 1fr))",
                 9: "repeat(9, minmax(0, 1fr))",
