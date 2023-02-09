@@ -9,7 +9,7 @@ import {assignSquares} from "~/utils/assign"
 import {getSuperBowl} from "~/utils/espn"
 
 const meta: MetaFunction = () => ({
-    title: "💿 remix starter | home",
+    title: "🏈 super bowl squares | home",
 })
 
 const loader = async () => {
