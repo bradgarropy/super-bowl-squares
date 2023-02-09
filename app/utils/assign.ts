@@ -39,15 +39,11 @@ const assignSquares = (names: string[]): string[] => {
         return participant
     }, {})
 
-    console.log(participants)
-
     const squares = names.flatMap(name => {
         return new Array(participants[name].entries).fill(
             participants[name].initials,
         )
     })
-
-    console.log(squares)
 
     return arrayShuffle(squares)
 }

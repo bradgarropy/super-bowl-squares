@@ -27,7 +27,6 @@ const IndexRoute = () => {
     const nameRef = useRef<HTMLInputElement>(null)
 
     useEffect(() => {
-        console.log("effect")
         const newSquares = assignSquares(names)
         setSquares(newSquares)
     }, [names])
@@ -35,7 +34,7 @@ const IndexRoute = () => {
     const handleAddName: FormEventHandler<HTMLFormElement> = event => {
         event.preventDefault()
 
-        const newNames = [...names, name]
+        const newNames = [...names, name.trim()]
         setNames(newNames)
         setName("")
 
@@ -63,25 +62,28 @@ const IndexRoute = () => {
                     id="name"
                     className="text-black mr-8"
                     value={name}
+                    autoComplete="name"
                     onChange={event => setName(event?.currentTarget.value)}
                 />
 
                 <button type="submit">add</button>
             </form>
 
-            {names?.map(name => {
-                return (
-                    <span
-                        key={name}
-                        className="rounded-full border-white border-2 py-1 px-4 inline-grid grid-flow-col gap-x-2"
-                    >
-                        <span className="">{name}</span>
-                        <button onClick={() => handleRemoveName(name)}>
-                            <XMarkIcon className="h-5 w-5 text-white" />
-                        </button>
-                    </span>
-                )
-            })}
+            <div className="flex flex-wrap gap-2">
+                {names?.map((name, index) => {
+                    return (
+                        <span
+                            key={index}
+                            className="rounded-full border-white border-2 py-1 px-4 inline-grid grid-flow-col gap-x-2"
+                        >
+                            <span className="">{name}</span>
+                            <button onClick={() => handleRemoveName(name)}>
+                                <XMarkIcon className="h-5 w-5 text-white" />
+                            </button>
+                        </span>
+                    )
+                })}
+            </div>
 
             <div className="grid grid-cols-squares grid-rows-squares border-white border-4 tabular-nums bg-white text-center mt-12">
                 {/* empty */}
