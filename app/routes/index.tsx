@@ -3,7 +3,7 @@ import type {MetaFunction} from "@remix-run/node"
 import {json} from "@remix-run/node"
 import {useLoaderData} from "@remix-run/react"
 import type {FormEventHandler} from "react"
-import {useRef, useState} from "react"
+import {useEffect, useRef, useState} from "react"
 
 import {assignSquares} from "~/utils/assign"
 import {getSuperBowl} from "~/utils/espn"
@@ -26,15 +26,18 @@ const IndexRoute = () => {
 
     const nameRef = useRef<HTMLInputElement>(null)
 
+    useEffect(() => {
+        console.log("effect")
+        const newSquares = assignSquares(names)
+        setSquares(newSquares)
+    }, [names])
+
     const handleAddName: FormEventHandler<HTMLFormElement> = event => {
         event.preventDefault()
 
         const newNames = [...names, name]
-        const newSquares = assignSquares(newNames)
-
         setNames(newNames)
         setName("")
-        setSquares(newSquares)
 
         nameRef.current?.focus()
     }
@@ -42,6 +45,7 @@ const IndexRoute = () => {
     const handleRemoveName = (name: string) => {
         const newNames = names.filter(n => n !== name)
         setNames(newNames)
+
         nameRef.current?.focus()
     }
 
