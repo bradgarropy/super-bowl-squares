@@ -1,5 +1,10 @@
-import type {LinksFunction, MetaFunction} from "@remix-run/node"
+import type {
+    LinksFunction,
+    LoaderFunctionArgs,
+    MetaFunction,
+} from "@remix-run/node"
 import {
+    json,
     Links,
     LiveReload,
     Meta,
@@ -11,6 +16,8 @@ import {
 import Footer from "~/components/Footer/Footer"
 import Header from "~/components/Header/Header"
 import tailwindStyles from "~/styles/tailwind.css"
+
+import {getSession} from "./utils/session.server"
 
 const meta: MetaFunction = () => {
     return [
@@ -29,6 +36,13 @@ const links: LinksFunction = () => {
     ]
 
     return links
+}
+
+export const loader = async ({request}: LoaderFunctionArgs) => {
+    const session = await getSession(request.headers.get("Cookie"))
+    const user = session.get("user")
+
+    return json({user})
 }
 
 const App = () => {

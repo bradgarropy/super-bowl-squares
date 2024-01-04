@@ -1,5 +1,7 @@
 import type {ActionFunctionArgs} from "@remix-run/node"
-import {Form, redirect} from "@remix-run/react"
+import {Form, Link, redirect} from "@remix-run/react"
+
+import {commitSession, getSession} from "~/utils/session.server"
 
 export const action = async ({request}: ActionFunctionArgs) => {
     console.log("login")
@@ -8,13 +10,22 @@ export const action = async ({request}: ActionFunctionArgs) => {
     const email = formData.get("email")
     const password = formData.get("password")
 
-    console.log({email, password})
-
     // look up user by email
     // check to see if password matches
     // TODO
 
-    return redirect("/boards")
+    const session = await getSession(request.headers.get("Cookie"))
+
+    session.set("user", {
+        id: 1,
+        firstName: "Brad",
+        lastName: "Garropy",
+        email: "bradgarropy@gmail.com",
+    })
+
+    const setCookieHeader = await commitSession(session)
+
+    return redirect("/boards", {headers: {"Set-Cookie": setCookieHeader}})
 }
 
 const Route = () => {
@@ -50,6 +61,14 @@ const Route = () => {
                     login
                 </button>
             </Form>
+
+            <p className="mt-10 text-center">
+                Or{" "}
+                <Link to="/signup" className="underline">
+                    sign up
+                </Link>{" "}
+                if you do not have an account.
+            </p>
         </div>
     )
 }

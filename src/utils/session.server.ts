@@ -1,11 +1,9 @@
 import {createCookieSessionStorage} from "@remix-run/node"
 
-const storage = createCookieSessionStorage({
-    cookie: {
-        httpOnly: true,
-        name: "__session",
-        path: "/",
-        secrets: [process.env.SESSION_SECRET],
-        sameSite: "lax",
-    },
+import {cookie} from "~/utils/cookie.server"
+
+const {commitSession, destroySession, getSession} = createCookieSessionStorage({
+    cookie,
 })
+
+export {commitSession, destroySession, getSession}

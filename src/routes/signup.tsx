@@ -1,6 +1,8 @@
 import type {ActionFunctionArgs} from "@remix-run/node"
 import {Form, redirect} from "@remix-run/react"
 
+import {commitSession, getSession} from "~/utils/session.server"
+
 export const action = async ({request}: ActionFunctionArgs) => {
     console.log("signup")
 
@@ -11,8 +13,6 @@ export const action = async ({request}: ActionFunctionArgs) => {
     const email = formData.get("email")
     const password = formData.get("password")
     const passwordConfirmation = formData.get("passwordConfirmation")
-
-    console.log({firstName, lastName, email, password, passwordConfirmation})
 
     // check if email is already taken
     // TODO
@@ -26,7 +26,14 @@ export const action = async ({request}: ActionFunctionArgs) => {
     // create user
     // TODO
 
-    return redirect("/boards")
+    // set session
+    const session = await getSession(request.headers.get("Cookie"))
+    session.set("user", {id: 1, firstName, lastName, email})
+    const setCookieHeader = await commitSession(session)
+
+    return redirect("/boards", {
+        headers: {"Set-Cookie": setCookieHeader},
+    })
 }
 
 const Route = () => {
