@@ -9,9 +9,13 @@ import Grid from "~/components/Grid"
 import {assignSquares} from "~/utils/assign"
 import {getSuperBowl} from "~/utils/espn"
 
-const meta: MetaFunction = () => ({
-    title: "🏈 super bowl squares | home",
-})
+const meta: MetaFunction = () => {
+    return [
+        {
+            title: "🏈 super bowl squares | home",
+        },
+    ]
+}
 
 const loader = async () => {
     const superBowl = await getSuperBowl()

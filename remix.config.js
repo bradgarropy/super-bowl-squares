@@ -1,10 +1,10 @@
 /** @type {import('@remix-run/dev').AppConfig} */
 
 const config = {
-    serverBuildTarget: "vercel",
-    server: process.env.NODE_ENV === "development" ? undefined : "./server.js",
+    appDirectory: "src",
     ignoredRouteFiles: ["**/.*"],
-    serverDependenciesToBundle: ["array-shuffle"],
+    future: {},
+    serverModuleFormat: "esm",
 }
 
-module.exports = config
+export default config

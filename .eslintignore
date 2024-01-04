@@ -6,12 +6,14 @@
 
 # build
 /.cache
+/build
 /public/build
-/api
-/app/styles/tailwind.css
 
 # test
 /coverage
 
 # secrets
 .env*
+
+# os
+.DS_Store
