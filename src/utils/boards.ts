@@ -39,4 +39,12 @@ const getBoards = (userId: number) => {
     ]
 }
 
-export {getBoard, getBoards}
+const createBoard = async (userId: number) => {
+    return {
+        id: 6,
+        name: "Board 6",
+        userId,
+    }
+}
+
+export {createBoard, getBoard, getBoards}

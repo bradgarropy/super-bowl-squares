@@ -17,6 +17,8 @@ const Route = () => {
 
     return (
         <>
+            <Link to="/boards/new">Create a new board</Link>
+
             <h1>boards</h1>
 
             {boards.map(board => {

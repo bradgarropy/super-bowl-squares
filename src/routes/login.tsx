@@ -36,6 +36,7 @@ const Route = () => {
             <Form method="post" className="grid gap-y-4">
                 <div className="grid">
                     <label htmlFor="email">email</label>
+
                     <input
                         className="text-black"
                         type="email"
