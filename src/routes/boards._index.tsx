@@ -1,20 +1,15 @@
+import type {LoaderFunctionArgs} from "@remix-run/node"
 import {json} from "@remix-run/node"
 import {Link, useLoaderData} from "@remix-run/react"
 
-export const loader = async () => {
-    return json({
-        boards: [
-            {
-                id: 1,
-            },
-            {
-                id: 2,
-            },
-            {
-                id: 3,
-            },
-        ],
-    })
+import {requireUser} from "~/utils/auth.server"
+import {getBoards} from "~/utils/boards"
+
+export const loader = async ({request}: LoaderFunctionArgs) => {
+    const user = await requireUser(request)
+    const boards = getBoards(user.id)
+
+    return json({boards})
 }
 
 const Route = () => {
