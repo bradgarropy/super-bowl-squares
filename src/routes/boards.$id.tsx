@@ -12,7 +12,7 @@ import {getSuperBowl} from "~/utils/espn"
 
 export const loader = async ({request, params}: LoaderFunctionArgs) => {
     const user = await requireUser(request)
-    const board = await getBoard(params.id)
+    const board = await getBoard(Number(params.id))
     const superBowl = await getSuperBowl()
 
     return json({
