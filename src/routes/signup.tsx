@@ -1,6 +1,8 @@
 import type {ActionFunctionArgs} from "@remix-run/node"
 import {Form, redirect} from "@remix-run/react"
+import bcrypt from "bcryptjs"
 
+import {db} from "~/utils/prisma"
 import {commitSession, getSession} from "~/utils/session.server"
 
 export const action = async ({request}: ActionFunctionArgs) => {
@@ -8,27 +10,47 @@ export const action = async ({request}: ActionFunctionArgs) => {
 
     const formData = await request.formData()
 
-    const firstName = formData.get("firstName")
-    const lastName = formData.get("lastName")
-    const email = formData.get("email")
-    const password = formData.get("password")
+    const firstName = formData.get("firstName") as string
+    const lastName = formData.get("lastName") as string
+    const email = formData.get("email") as string
+    const password = formData.get("password") as string
     const passwordConfirmation = formData.get("passwordConfirmation")
 
     // check if email is already taken
-    // TODO
+    const existingUser = await db.user.findFirst({where: {email}})
+
+    if (existingUser) {
+        console.log("email already exists")
+        throw redirect("/signup")
+    }
 
     // check if password and passwordConfirmation match
     if (password !== passwordConfirmation) {
         console.log("passwords dont match")
-        return redirect("/signup")
+        throw redirect("/signup")
     }
 
+    const hashedPassword = await bcrypt.hash(password, 10)
+
     // create user
-    // TODO
+    const user = await db.user.create({
+        data: {
+            firstName,
+            lastName,
+            email,
+            password: hashedPassword,
+        },
+        select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+        },
+    })
 
     // set session
     const session = await getSession(request.headers.get("Cookie"))
-    session.set("user", {id: 1, firstName, lastName, email})
+    session.set("user", user)
     const setCookieHeader = await commitSession(session)
 
     return redirect("/boards", {
