@@ -40,7 +40,8 @@
         "test": "vitest --coverage",
         "test:watch": "vitest --coverage --watch",
         "contributors": "all-contributors generate",
-        "new": "plop"
+        "new": "plop",
+        "postinstall": "prisma generate"
     },
     "dependencies": {
         "@heroicons/react": "^2.1.1",
