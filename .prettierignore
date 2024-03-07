@@ -17,3 +17,6 @@
 
 # os
 .DS_Store
+
+# host
+/.vercel
