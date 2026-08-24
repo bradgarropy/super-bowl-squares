@@ -2,7 +2,7 @@ import type {ActionFunctionArgs} from "@remix-run/node"
 import {Form, redirect} from "@remix-run/react"
 import bcrypt from "bcryptjs"
 
-import {db} from "~/utils/prisma"
+import {db} from "~/utils/prisma.server"
 import {commitSession, getSession} from "~/utils/session.server"
 
 export const action = async ({request}: ActionFunctionArgs) => {

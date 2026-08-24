@@ -16,10 +16,12 @@ jobs:
             - name: "🟢 node"
               uses: actions/setup-node@v2.1.4
               with:
-                  node-version: 20
+                  node-version: 24
                   registry-url: https://registry.npmjs.org/
             - name: "📦 install"
               run: npm ci
+              env:
+                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
             - name: "🟦 types"
               run: npm run typecheck
             - name: "🧪 test"

@@ -11,8 +11,8 @@ import {getBoard} from "~/utils/boards"
 import {getSuperBowl} from "~/utils/espn"
 
 export const loader = async ({request, params}: LoaderFunctionArgs) => {
-    const user = await requireUser(request)
-    const board = await getBoard(Number(params.id))
+    await requireUser(request)
+    const board = getBoard(Number(params.id))
     const superBowl = await getSuperBowl()
 
     return json({
@@ -22,7 +22,7 @@ export const loader = async ({request, params}: LoaderFunctionArgs) => {
 }
 
 const Route = () => {
-    const {board, superBowl} = useLoaderData<typeof loader>()
+    const {superBowl} = useLoaderData<typeof loader>()
 
     const [name, setName] = useState<string>("")
     const [names, setNames] = useState<string[]>([])

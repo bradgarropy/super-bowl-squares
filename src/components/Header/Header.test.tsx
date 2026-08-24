@@ -1,15 +1,28 @@
 import {render, screen} from "@testing-library/react"
-import {MemoryRouter} from "react-router"
+import {createMemoryRouter, RouterProvider} from "react-router"
 import {expect, test} from "vitest"
 
 import Header from "~/components/Header"
 
 test("renders", () => {
-    render(
-        <MemoryRouter>
-            <Header />
-        </MemoryRouter>,
+    const router = createMemoryRouter(
+        [
+            {
+                id: "root",
+                path: "/",
+                Component: Header,
+            },
+        ],
+        {
+            hydrationData: {
+                loaderData: {
+                    root: {user: null},
+                },
+            },
+        },
     )
+
+    render(<RouterProvider router={router} />)
 
     expect(screen.getByText("Super Bowl Squares"))
 })
