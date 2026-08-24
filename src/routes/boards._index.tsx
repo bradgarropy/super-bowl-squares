@@ -12,7 +12,7 @@ export const loader = async ({request}: Route.LoaderArgs) => {
     return {boards}
 }
 
-const Route = ({loaderData}: Route.ComponentProps) => {
+const Boards = ({loaderData}: Route.ComponentProps) => {
     const {boards} = loaderData
     return (
         <>
@@ -31,4 +31,4 @@ const Route = ({loaderData}: Route.ComponentProps) => {
     )
 }
 
-export default Route
+export default Boards

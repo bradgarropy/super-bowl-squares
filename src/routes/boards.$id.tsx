@@ -21,7 +21,7 @@ export const loader = async ({request, params}: Route.LoaderArgs) => {
     }
 }
 
-const Route = ({loaderData}: Route.ComponentProps) => {
+const Board = ({loaderData}: Route.ComponentProps) => {
     const {superBowl} = loaderData
     const [name, setName] = useState<string>("")
     const [names, setNames] = useState<string[]>([])
@@ -95,4 +95,4 @@ const Route = ({loaderData}: Route.ComponentProps) => {
     )
 }
 
-export default Route
+export default Board
