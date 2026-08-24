@@ -15,9 +15,16 @@
             "~/utils/*": ["./src/utils/*"]
         },
         "resolveJsonModule": true,
+        "rootDirs": [".", "./.react-router/types"],
         "skipLibCheck": true,
         "strict": true,
         "target": "ESNext"
     },
-    "include": ["remix.env.d.ts", "**/*.js", "**/*.jsx", "**/*.ts", "**/*.tsx"]
+    "include": [
+        ".react-router/types/**/*",
+        "**/*.js",
+        "**/*.jsx",
+        "**/*.ts",
+        "**/*.tsx"
+    ]
 }
