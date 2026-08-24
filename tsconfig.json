@@ -1,7 +1,6 @@
 {
     "compilerOptions": {
         "allowJs": true,
-        "baseUrl": ".",
         "esModuleInterop": true,
         "forceConsistentCasingInFileNames": true,
         "isolatedModules": true,
@@ -12,6 +11,7 @@
         "noEmit": true,
         "paths": {
             "~/*": ["./src/*"],
+            "~/prisma/*": ["./prisma/*"],
             "~/utils/*": ["./src/utils/*"]
         },
         "resolveJsonModule": true,
