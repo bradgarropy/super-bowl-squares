@@ -1,9 +1,10 @@
-import {Form, Link, useLoaderData} from "@remix-run/react"
+import {Form, Link, useRouteLoaderData} from "react-router"
 
 import type {loader} from "~/root"
 
 const Header = () => {
-    const {user} = useLoaderData<typeof loader>()
+    const data = useRouteLoaderData<typeof loader>("root")
+    const user = data?.user
 
     return (
         <header className="flex justify-between items-center px-8 py-12">

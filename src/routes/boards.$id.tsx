@@ -1,6 +1,4 @@
 import {XMarkIcon} from "@heroicons/react/24/solid"
-import type {LoaderFunctionArgs} from "@remix-run/node"
-import {json, useLoaderData} from "@remix-run/react"
 import type {FormEventHandler} from "react"
 import {useEffect, useRef, useState} from "react"
 
@@ -10,20 +8,21 @@ import {requireUser} from "~/utils/auth.server"
 import {getBoard} from "~/utils/boards"
 import {getSuperBowl} from "~/utils/espn"
 
-export const loader = async ({request, params}: LoaderFunctionArgs) => {
+import type {Route} from "./+types/boards.$id"
+
+export const loader = async ({request, params}: Route.LoaderArgs) => {
     await requireUser(request)
     const board = getBoard(Number(params.id))
     const superBowl = await getSuperBowl()
 
-    return json({
+    return {
         board,
         superBowl,
-    })
+    }
 }
 
-const Route = () => {
-    const {superBowl} = useLoaderData<typeof loader>()
-
+const Route = ({loaderData}: Route.ComponentProps) => {
+    const {superBowl} = loaderData
     const [name, setName] = useState<string>("")
     const [names, setNames] = useState<string[]>([])
     const [squares, setSquares] = useState<string[]>([])

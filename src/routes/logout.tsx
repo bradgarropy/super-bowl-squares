@@ -1,4 +1,5 @@
-import {type ActionFunctionArgs, redirect} from "@remix-run/node"
+import type {ActionFunctionArgs} from "react-router"
+import {redirect} from "react-router"
 
 import {destroySession, getSession} from "~/utils/session.server"
 

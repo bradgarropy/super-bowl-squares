@@ -1,20 +1,19 @@
-import type {LoaderFunctionArgs} from "@remix-run/node"
-import {json} from "@remix-run/node"
-import {Link, useLoaderData} from "@remix-run/react"
+import {Link} from "react-router"
 
 import {requireUser} from "~/utils/auth.server"
 import {getBoards} from "~/utils/boards"
 
-export const loader = async ({request}: LoaderFunctionArgs) => {
+import type {Route} from "./+types/boards._index"
+
+export const loader = async ({request}: Route.LoaderArgs) => {
     const user = await requireUser(request)
     const boards = getBoards(user.id)
 
-    return json({boards})
+    return {boards}
 }
 
-const Route = () => {
-    const {boards} = useLoaderData<typeof loader>()
-
+const Route = ({loaderData}: Route.ComponentProps) => {
+    const {boards} = loaderData
     return (
         <>
             <Link to="/boards/new">Create a new board</Link>

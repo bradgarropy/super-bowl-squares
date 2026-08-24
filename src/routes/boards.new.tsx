@@ -1,13 +1,12 @@
-import type {ActionFunctionArgs, LoaderFunctionArgs} from "@remix-run/node"
-import {json, redirect} from "@remix-run/node"
-import {Form} from "@remix-run/react"
+import type {ActionFunctionArgs, LoaderFunctionArgs} from "react-router"
+import {Form, redirect} from "react-router"
 
 import {requireUser} from "~/utils/auth.server"
 import {createBoard} from "~/utils/boards"
 
 export const loader = async ({request}: LoaderFunctionArgs) => {
     const user = await requireUser(request)
-    return json({user})
+    return {user}
 }
 
 export const action = async ({request}: ActionFunctionArgs) => {

@@ -1,6 +1,6 @@
-import type {ActionFunctionArgs} from "@remix-run/node"
-import {Form, Link, redirect} from "@remix-run/react"
 import bcrypt from "bcryptjs"
+import type {ActionFunctionArgs} from "react-router"
+import {Form, Link, redirect} from "react-router"
 
 import {db} from "~/utils/prisma.server"
 import {commitSession, getSession} from "~/utils/session.server"

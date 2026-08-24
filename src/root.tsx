@@ -2,22 +2,13 @@ import type {
     LinksFunction,
     LoaderFunctionArgs,
     MetaFunction,
-} from "@remix-run/node"
-import {
-    json,
-    Links,
-    LiveReload,
-    Meta,
-    Outlet,
-    Scripts,
-    ScrollRestoration,
-} from "@remix-run/react"
+} from "react-router"
+import {Links, Meta, Outlet, Scripts, ScrollRestoration} from "react-router"
 
 import Footer from "~/components/Footer/Footer"
 import Header from "~/components/Header/Header"
-import tailwindStyles from "~/styles/tailwind.css"
-
-import {getSession} from "./utils/session.server"
+import tailwindStyles from "~/styles/tailwind.css?url"
+import {getSession} from "~/utils/session.server"
 
 const meta: MetaFunction = () => {
     return [
@@ -42,7 +33,7 @@ export const loader = async ({request}: LoaderFunctionArgs) => {
     const session = await getSession(request.headers.get("Cookie"))
     const user = session.get("user")
 
-    return json({user})
+    return {user}
 }
 
 const App = () => {
@@ -66,7 +57,6 @@ const App = () => {
 
                 <ScrollRestoration />
                 <Scripts />
-                <LiveReload />
             </body>
         </html>
     )
