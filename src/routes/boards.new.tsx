@@ -1,22 +1,23 @@
-import type {ActionFunctionArgs, LoaderFunctionArgs} from "react-router"
 import {Form, redirect} from "react-router"
 
 import {requireUser} from "~/utils/auth.server"
 import {createBoard} from "~/utils/boards"
 
-export const loader = async ({request}: LoaderFunctionArgs) => {
+import type {Route} from "./+types/boards.new"
+
+export const loader = async ({request}: Route.LoaderArgs) => {
     const user = await requireUser(request)
     return {user}
 }
 
-export const action = async ({request}: ActionFunctionArgs) => {
+export const action = async ({request}: Route.ActionArgs) => {
     const user = await requireUser(request)
     const board = await createBoard(user.id)
 
     return redirect(`/boards/${board.id}`)
 }
 
-const Route = () => {
+const NewBoard = () => {
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">Create a new board</h1>
@@ -53,4 +54,4 @@ const Route = () => {
     )
 }
 
-export default Route
+export default NewBoard

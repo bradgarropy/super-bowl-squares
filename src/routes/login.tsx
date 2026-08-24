@@ -1,11 +1,12 @@
 import bcrypt from "bcryptjs"
-import type {ActionFunctionArgs} from "react-router"
 import {Form, Link, redirect} from "react-router"
 
 import {db} from "~/utils/prisma.server"
 import {commitSession, getSession} from "~/utils/session.server"
 
-export const action = async ({request}: ActionFunctionArgs) => {
+import type {Route} from "./+types/login"
+
+export const action = async ({request}: Route.ActionArgs) => {
     console.log("login")
 
     const formData = await request.formData()
@@ -51,7 +52,7 @@ export const action = async ({request}: ActionFunctionArgs) => {
     return redirect("/boards", {headers: {"Set-Cookie": setCookieHeader}})
 }
 
-const Route = () => {
+const Login = () => {
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">login</h1>
@@ -97,4 +98,4 @@ const Route = () => {
     )
 }
 
-export default Route
+export default Login
