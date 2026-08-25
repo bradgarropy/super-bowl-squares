@@ -29,17 +29,18 @@
         "url": "https://github.com/bradgarropy/super-bowl-squares"
     },
     "scripts": {
-        "start": "react-router dev",
         "build": "react-router build",
-        "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
+        "contributors": "all-contributors generate",
+        "db:migrate": "prisma migrate deploy",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
-        "typecheck": "react-router typegen && tsc",
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "postinstall": "prisma generate",
+        "start": "react-router dev",
         "test": "vitest --coverage",
         "test:watch": "vitest --coverage --watch",
-        "contributors": "all-contributors generate",
-        "postinstall": "prisma generate"
+        "typecheck": "react-router typegen && tsc"
     },
     "dependencies": {
         "@heroicons/react": "^2.1.1",
