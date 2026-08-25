@@ -1,13 +1,14 @@
 import react from "@vitejs/plugin-react"
-import tsconfigPaths from "vite-tsconfig-paths"
 import {defineConfig} from "vitest/config"
 
 const config = defineConfig({
-    plugins: [tsconfigPaths(), react()],
+    plugins: [react()],
+    resolve: {
+        tsconfigPaths: true,
+    },
     test: {
         clearMocks: true,
         coverage: {
-            all: false,
             clean: true,
             cleanOnRerun: true,
             enabled: true,

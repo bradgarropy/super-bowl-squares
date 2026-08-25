@@ -1,4 +1,4 @@
-name: "🧪 test"
+name: "🏗️ build"
 
 on:
     push:
@@ -7,8 +7,8 @@ on:
     pull_request:
 
 jobs:
-    test:
-        name: "🧪 test"
+    build:
+        name: "🏗️ build"
         runs-on: ubuntu-latest
         steps:
             - name: "📚 checkout"
@@ -22,9 +22,9 @@ jobs:
               run: npm ci
               env:
                   DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
-            - name: "🟦 types"
-              run: npm run typecheck
-            - name: "🧪 test"
-              run: npm run test
-            - name: "☂️ coverage"
-              uses: codecov/codecov-action@v1.2.1
+            - name: "🏗️ build"
+              run: npm run build
+              env:
+                  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+                  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}

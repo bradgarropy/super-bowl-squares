@@ -1,6 +1,6 @@
-import type {MetaFunction} from "@remix-run/node"
+import type {Route} from "./+types/_index"
 
-export const meta: MetaFunction = () => {
+export const meta: Route.MetaFunction = () => {
     return [
         {
             title: "🏈 super bowl squares | home",
@@ -8,7 +8,7 @@ export const meta: MetaFunction = () => {
     ]
 }
 
-const Route = () => {
+const Home = () => {
     return (
         <>
             <h1>Make your own Super Bowl Squares and play with friends!</h1>
@@ -16,4 +16,4 @@ const Route = () => {
     )
 }
 
-export default Route
+export default Home

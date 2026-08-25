@@ -6,6 +6,7 @@
 
 # build
 /.cache
+/.react-router
 /build
 /public/build
 
@@ -14,6 +15,7 @@
 
 # secrets
 .env*
+!.env.example
 
 # os
 .DS_Store

@@ -1,4 +1,4 @@
-import {createCookie} from "@remix-run/node"
+import {createCookie} from "react-router"
 
 const cookie = createCookie("session", {
     httpOnly: true,
