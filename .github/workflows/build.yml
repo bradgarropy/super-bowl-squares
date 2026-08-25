@@ -1,0 +1,30 @@
+name: "🏗️ build"
+
+on:
+    push:
+        branches:
+            - main
+    pull_request:
+
+jobs:
+    build:
+        name: "🏗️ build"
+        runs-on: ubuntu-latest
+        steps:
+            - name: "📚 checkout"
+              uses: actions/checkout@v7.0.1
+            - name: "🟢 node"
+              uses: actions/setup-node@v7.0.0
+              with:
+                  node-version: 24
+                  registry-url: https://registry.npmjs.org/
+            - name: "📦 install"
+              run: npm ci
+              env:
+                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+            - name: "🏗️ build"
+              run: npm run build
+              env:
+                  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
+                  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}
