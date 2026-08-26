@@ -12,6 +12,7 @@
         "vercel",
         "react-router",
         "tailwind",
+        "drizzle",
         "hacktoberfest"
     ],
     "homepage": "https://github.com/bradgarropy/super-bowl-squares",
