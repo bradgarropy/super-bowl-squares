@@ -1,6 +1,7 @@
 import "dotenv/config"
 
 import bcrypt from "bcryptjs"
+import {sql} from "drizzle-orm"
 
 import {db} from "~/db/client.server"
 import {users} from "~/db/schema"
@@ -26,7 +27,9 @@ const main = async () => {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     await db.transaction(async transaction => {
-        await transaction.delete(users)
+        await transaction.execute(
+            sql`truncate table ${users} restart identity cascade`,
+        )
         await transaction.insert(users).values(
             userSeeds.map(user => ({
                 ...user,
