@@ -54,7 +54,6 @@
         "bcryptjs": "^2.4.3",
         "dotenv": "^17.4.2",
         "drizzle-orm": "^0.45.2",
-        "drizzle-seed": "^0.3.1",
         "isbot": "^5.1.1",
         "pg": "^8.23.0",
         "react": "^19.2.8",

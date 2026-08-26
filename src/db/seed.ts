@@ -1,19 +1,18 @@
 import "dotenv/config"
 
 import bcrypt from "bcryptjs"
-import {inArray} from "drizzle-orm"
-import {seed} from "drizzle-seed"
 
 import {db} from "~/db/client.server"
 import {users} from "~/db/schema"
 
 const password = "password"
 const testEmail = "test@example.com"
-const generatedEmails = [
-    "player.one@example.com",
-    "player.two@example.com",
-    "player.three@example.com",
-    "player.four@example.com",
+const userSeeds = [
+    {firstName: "Test", lastName: "User", email: testEmail},
+    {firstName: "Patrick", lastName: "Mahomes", email: "patrick@example.com"},
+    {firstName: "Jalen", lastName: "Hurts", email: "jalen@example.com"},
+    {firstName: "Josh", lastName: "Allen", email: "josh@example.com"},
+    {firstName: "Lamar", lastName: "Jackson", email: "lamar@example.com"},
 ]
 
 const main = async () => {
@@ -25,34 +24,18 @@ const main = async () => {
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
-    const seedEmails = [testEmail, ...generatedEmails]
 
-    await db.delete(users).where(inArray(users.email, seedEmails))
-
-    await seed(db, {users}, {count: generatedEmails.length, seed: 1}).refine(
-        funcs => ({
-            users: {
-                columns: {
-                    email: funcs.valuesFromArray({
-                        values: generatedEmails,
-                        isUnique: true,
-                    }),
-                    firstName: funcs.firstName(),
-                    lastName: funcs.lastName(),
-                    password: funcs.default({defaultValue: hashedPassword}),
-                },
-            },
-        }),
-    )
-
-    await db.insert(users).values({
-        email: testEmail,
-        firstName: "Test",
-        lastName: "User",
-        password: hashedPassword,
+    await db.transaction(async transaction => {
+        await transaction.delete(users)
+        await transaction.insert(users).values(
+            userSeeds.map(user => ({
+                ...user,
+                password: hashedPassword,
+            })),
+        )
     })
 
-    console.log(`Seeded ${seedEmails.length} users`)
+    console.log(`Seeded ${userSeeds.length} users`)
     console.log(`Login with ${testEmail} / ${password}`)
 }
 
