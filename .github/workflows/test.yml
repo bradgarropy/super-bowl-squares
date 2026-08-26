@@ -24,6 +24,10 @@ jobs:
                   DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
             - name: "🟦 types"
               run: npm run typecheck
+            - name: "🗃️ migrations"
+              run: npm run db:check
+              env:
+                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
             - name: "🧪 test"
               run: npm run test
             - name: "☂️ coverage"
