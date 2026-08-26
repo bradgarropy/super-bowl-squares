@@ -33,6 +33,7 @@
         "contributors": "all-contributors generate",
         "db:generate": "drizzle-kit generate",
         "db:migrate": "prisma migrate deploy",
+        "db:seed": "tsx src/db/seed.ts",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
         "lint": "eslint .",
