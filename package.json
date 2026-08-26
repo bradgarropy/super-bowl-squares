@@ -31,6 +31,7 @@
     "scripts": {
         "build": "react-router build",
         "contributors": "all-contributors generate",
+        "db:generate": "drizzle-kit generate",
         "db:migrate": "prisma migrate deploy",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
