@@ -24,4 +24,4 @@
 /.vercel
 
 # db
-/prisma/generated
+/drizzle

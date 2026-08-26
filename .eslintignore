@@ -22,6 +22,5 @@
 
 # host
 /.vercel
-
 # db
-/prisma/generated
+/drizzle

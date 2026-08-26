@@ -11,7 +11,6 @@
         "noEmit": true,
         "paths": {
             "~/*": ["./src/*"],
-            "~/prisma/*": ["./prisma/*"],
             "~/utils/*": ["./src/utils/*"]
         },
         "resolveJsonModule": true,
