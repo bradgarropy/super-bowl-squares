@@ -1,4 +1,5 @@
-CREATE TABLE "User" (
+-- Baseline the existing Prisma schema while remaining valid for empty databases.
+CREATE TABLE IF NOT EXISTS "User" (
 	"id" serial PRIMARY KEY NOT NULL,
 	"firstName" text NOT NULL,
 	"lastName" text NOT NULL,
@@ -8,4 +9,4 @@ CREATE TABLE "User" (
 	"updatedAt" timestamp (3) NOT NULL
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX "User_email_key" ON "User" USING btree ("email");
+CREATE UNIQUE INDEX IF NOT EXISTS "User_email_key" ON "User" USING btree ("email");
