@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs"
+import {eq} from "drizzle-orm"
 import {Form, redirect} from "react-router"
 
-import {db} from "~/utils/prisma.server"
+import {db} from "~/db/client.server"
+import {users} from "~/db/schema"
 import {commitSession, getSession} from "~/utils/session.server"
 
 import type {Route} from "./+types/signup"
@@ -18,7 +20,10 @@ export const action = async ({request}: Route.ActionArgs) => {
     const passwordConfirmation = formData.get("passwordConfirmation")
 
     // check if email is already taken
-    const existingUser = await db.user.findFirst({where: {email}})
+    const existingUser = await db.query.users.findFirst({
+        columns: {id: true},
+        where: eq(users.email, email),
+    })
 
     if (existingUser) {
         console.log("email already exists")
@@ -34,20 +39,24 @@ export const action = async ({request}: Route.ActionArgs) => {
     const hashedPassword = await bcrypt.hash(password, 10)
 
     // create user
-    const user = await db.user.create({
-        data: {
+    const [user] = await db
+        .insert(users)
+        .values({
             firstName,
             lastName,
             email,
             password: hashedPassword,
-        },
-        select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-        },
-    })
+        })
+        .returning({
+            id: users.id,
+            firstName: users.firstName,
+            lastName: users.lastName,
+            email: users.email,
+        })
+
+    if (!user) {
+        throw new Error("Failed to create user")
+    }
 
     // set session
     const session = await getSession(request.headers.get("Cookie"))

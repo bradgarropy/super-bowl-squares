@@ -1,7 +1,9 @@
 import bcrypt from "bcryptjs"
+import {eq} from "drizzle-orm"
 import {Form, Link, redirect} from "react-router"
 
-import {db} from "~/utils/prisma.server"
+import {db} from "~/db/client.server"
+import {users} from "~/db/schema"
 import {commitSession, getSession} from "~/utils/session.server"
 
 import type {Route} from "./+types/login"
@@ -15,15 +17,15 @@ export const action = async ({request}: Route.ActionArgs) => {
     const password = formData.get("password") as string
 
     // look up user by email
-    const user = await db.user.findFirst({
-        where: {email},
-        select: {
+    const user = await db.query.users.findFirst({
+        columns: {
             id: true,
             firstName: true,
             lastName: true,
             email: true,
             password: true,
         },
+        where: eq(users.email, email),
     })
 
     if (!user) {
