@@ -1,12 +1,12 @@
 {
   "version": "7",
-  "dialect": "postgresql",
+  "dialect": "sqlite",
   "entries": [
     {
       "idx": 0,
-      "version": "7",
-      "when": 1787709331781,
-      "tag": "0000_groovy_luminals",
+      "version": "6",
+      "when": 1787799201052,
+      "tag": "0000_initial",
       "breakpoints": true
     }
   ]

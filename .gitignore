@@ -21,6 +21,5 @@
 .DS_Store
 
 # host
-/.vercel
 /.wrangler
 /worker-configuration.d.ts

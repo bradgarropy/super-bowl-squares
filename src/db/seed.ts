@@ -1,9 +1,8 @@
-import "dotenv/config"
-
 import bcrypt from "bcryptjs"
 import {sql} from "drizzle-orm"
+import {getPlatformProxy} from "wrangler"
 
-import {db} from "~/db/client.server"
+import {createDb} from "~/db/client.server"
 import {users} from "~/db/schema"
 
 const password = "password"
@@ -17,33 +16,36 @@ const userSeeds = [
 ]
 
 const main = async () => {
-    if (
-        process.env.NODE_ENV === "production" ||
-        process.env.VERCEL_ENV === "production"
-    ) {
+    if (process.env.NODE_ENV === "production") {
         throw new Error("Seeding is disabled in production")
     }
 
     const hashedPassword = await bcrypt.hash(password, 10)
 
-    await db.transaction(async transaction => {
-        await transaction.execute(
-            sql`truncate table ${users} restart identity cascade`,
-        )
-        await transaction.insert(users).values(
-            userSeeds.map(user => ({
-                ...user,
-                password: hashedPassword,
-            })),
-        )
+    const platform = await getPlatformProxy<Pick<Env, "DB">>({
+        remoteBindings: false,
     })
 
-    console.log(`Seeded ${userSeeds.length} users`)
-    console.log(`Login with ${testEmail} / ${password}`)
+    try {
+        const db = createDb(platform.env.DB)
+
+        await db.batch([
+            db.delete(users),
+            // Reset SQLite's auto-increment counter so seeded IDs start at 1.
+            db.run(sql`delete from sqlite_sequence where name = 'User'`),
+            db.insert(users).values(
+                userSeeds.map(user => ({
+                    ...user,
+                    password: hashedPassword,
+                })),
+            ),
+        ])
+
+        console.log(`Seeded ${userSeeds.length} users in local D1`)
+        console.log(`Login with ${testEmail} / ${password}`)
+    } finally {
+        await platform.dispose()
+    }
 }
 
-try {
-    await main()
-} finally {
-    await db.$client.end()
-}
+await main()

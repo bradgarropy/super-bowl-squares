@@ -2,7 +2,6 @@
 
 _A [React Router][react-router] app with [ESLint][eslint], [Prettier][prettier], [TypeScript][typescript], [Vitest][vitest], and [Tailwind][tailwind] included._
 
-[![vercel][vercel-badge]][vercel]
 [![github actions][github-actions-badge]][github-actions]
 [![codecov][codecov-badge]][codecov]
 [![contributing][contributing-badge]][contributing]
@@ -10,7 +9,7 @@ _A [React Router][react-router] app with [ESLint][eslint], [Prettier][prettier],
 [![discord][discord-badge]][discord]
 
 <p align="center">
-    <a href="https://super-bowl-squares-bradgarropy.vercel.app">
+    <a href="https://super-bowl-squares.bradgarropy.workers.dev">
         <img alt="super bowl squares" src="./public/github.png" width="800">
     </a>
 </p>
@@ -31,8 +30,6 @@ _A [React Router][react-router] app with [ESLint][eslint], [Prettier][prettier],
 
 <!-- ALL-CONTRIBUTORS-LIST:END -->
 
-[vercel]: https://vercel.com/bradgarropy/super-bowl-squares
-[vercel-badge]: https://img.shields.io/github/deployments/bradgarropy/super-bowl-squares/production?label=vercel&style=flat-square
 [github-actions]: https://github.com/bradgarropy/super-bowl-squares/actions
 [github-actions-badge]: https://img.shields.io/github/workflow/status/bradgarropy/super-bowl-squares/%F0%9F%A7%AA%20test?style=flat-square
 [codecov]: https://app.codecov.io/gh/bradgarropy/super-bowl-squares

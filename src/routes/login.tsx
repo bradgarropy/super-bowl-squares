@@ -2,15 +2,16 @@ import bcrypt from "bcryptjs"
 import {eq} from "drizzle-orm"
 import {Form, Link, redirect} from "react-router"
 
-import {db} from "~/db/client.server"
+import {dbCtx} from "~/db/client.server"
 import {users} from "~/db/schema"
 import {commitSession, getSession} from "~/utils/session.server"
 
 import type {Route} from "./+types/login"
 
-export const action = async ({request}: Route.ActionArgs) => {
+export const action = async ({request, context}: Route.ActionArgs) => {
     console.log("login")
 
+    const db = context.get(dbCtx)
     const formData = await request.formData()
 
     const email = formData.get("email") as string

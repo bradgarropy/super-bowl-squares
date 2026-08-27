@@ -3,6 +3,30 @@
     "name": "super-bowl-squares",
     "compatibility_date": "2026-08-26",
     "main": "./workers/app.ts",
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "super-bowl-squares",
+            "database_id": "2ad74fb0-f400-45b9-88ed-e3aee995fc05",
+            "migrations_dir": "drizzle",
+            "remote": false,
+        },
+    ],
+    "env": {
+        // Select at build time with CLOUDFLARE_ENV=staging, not just at upload time.
+        "staging": {
+            "name": "super-bowl-squares",
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "super-bowl-squares-staging",
+                    "database_id": "f18956e1-2721-4eab-88a4-878df8f229ea",
+                    "migrations_dir": "drizzle",
+                    "remote": false,
+                },
+            ],
+        },
+    },
     "observability": {
         "enabled": true,
         "head_sampling_rate": 1,

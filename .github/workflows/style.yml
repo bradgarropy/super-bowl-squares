@@ -16,8 +16,6 @@ jobs:
                   registry-url: https://registry.npmjs.org/
             - name: "📦 install"
               run: npm ci
-              env:
-                  DATABASE_URL_UNPOOLED: ${{ secrets.DATABASE_URL_UNPOOLED }}
             - name: "🧶 lint"
               run: npm run lint
             - name: "💾 format"
