@@ -1,31 +1,20 @@
-import {
-    pgTable,
-    serial,
-    text,
-    timestamp,
-    uniqueIndex,
-} from "drizzle-orm/pg-core"
+import {sql} from "drizzle-orm"
+import {integer, sqliteTable, text, uniqueIndex} from "drizzle-orm/sqlite-core"
 
-const users = pgTable(
+const users = sqliteTable(
     "User",
     {
-        id: serial("id").primaryKey(),
+        id: integer("id").primaryKey({autoIncrement: true}),
         firstName: text("firstName").notNull(),
         lastName: text("lastName").notNull(),
         email: text("email").notNull(),
         password: text("password").notNull(),
-        createdAt: timestamp("createdAt", {
-            mode: "date",
-            precision: 3,
-        })
-            .defaultNow()
+        createdAt: text("createdAt")
+            .default(sql`(current_timestamp)`)
             .notNull(),
-        updatedAt: timestamp("updatedAt", {
-            mode: "date",
-            precision: 3,
-        })
-            .$defaultFn(() => new Date())
-            .$onUpdate(() => new Date())
+        updatedAt: text("updatedAt")
+            .default(sql`(current_timestamp)`)
+            .$onUpdate(() => sql`(current_timestamp)`)
             .notNull(),
     },
     table => [uniqueIndex("User_email_key").on(table.email)],

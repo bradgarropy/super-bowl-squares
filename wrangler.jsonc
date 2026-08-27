@@ -3,6 +3,29 @@
     "name": "super-bowl-squares",
     "compatibility_date": "2026-08-26",
     "main": "./workers/app.ts",
+    // Remote IDs will be added after provisioning; local D1 works without them.
+    "d1_databases": [
+        {
+            "binding": "DB",
+            "database_name": "super-bowl-squares",
+            "migrations_dir": "drizzle",
+            "remote": false,
+        },
+    ],
+    "env": {
+        // Select at build time with CLOUDFLARE_ENV=staging, not just at upload time.
+        "staging": {
+            "name": "super-bowl-squares",
+            "d1_databases": [
+                {
+                    "binding": "DB",
+                    "database_name": "super-bowl-squares-staging",
+                    "migrations_dir": "drizzle",
+                    "remote": false,
+                },
+            ],
+        },
+    },
     "observability": {
         "enabled": true,
         "head_sampling_rate": 1,
