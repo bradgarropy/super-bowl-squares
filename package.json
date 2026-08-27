@@ -34,7 +34,7 @@
         "contributors": "all-contributors generate",
         "db:check": "drizzle-kit check",
         "db:generate": "drizzle-kit generate",
-        "db:migrate": "drizzle-kit migrate",
+        "db:migrate": "wrangler d1 migrations apply DB --local",
         "db:seed": "tsx src/db/seed.ts",
         "deploy": "npm run build && wrangler deploy",
         "format": "prettier --check .",
