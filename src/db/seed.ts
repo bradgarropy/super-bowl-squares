@@ -16,10 +16,7 @@ const userSeeds = [
 ]
 
 const main = async () => {
-    if (
-        process.env.NODE_ENV === "production" ||
-        process.env.VERCEL_ENV === "production"
-    ) {
+    if (process.env.NODE_ENV === "production") {
         throw new Error("Seeding is disabled in production")
     }
 
