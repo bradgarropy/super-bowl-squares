@@ -1,12 +1,10 @@
-import {drizzle} from "drizzle-orm/node-postgres"
-import {Pool} from "pg"
+import {drizzle} from "drizzle-orm/d1"
+import {createContext} from "react-router"
 
 import * as schema from "~/db/schema"
 
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-})
+const createDb = (binding: Env["DB"]) => drizzle(binding, {schema})
 
-const db = drizzle(pool, {schema})
+const dbCtx = createContext<ReturnType<typeof createDb>>()
 
-export {db}
+export {createDb, dbCtx}
