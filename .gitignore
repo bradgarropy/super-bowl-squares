@@ -22,3 +22,5 @@
 
 # host
 /.vercel
+/.wrangler
+/worker-configuration.d.ts

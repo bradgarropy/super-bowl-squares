@@ -22,5 +22,8 @@
 
 # host
 /.vercel
+/.wrangler
+/worker-configuration.d.ts
+
 # db
 /drizzle
