@@ -17,7 +17,7 @@ type GameTeam = Team & {
     abbreviation: string
 }
 
-type UpcomingGame = {
+type Game = {
     id: string
     name: string
     date: string
@@ -36,12 +36,19 @@ type EspnTeam = {
     logo: string
 }
 
+type EspnStatus = {
+    type: {
+        name: string
+        completed: boolean
+    }
+}
+
 type EspnScoreboard = {
     events: {
         id: string
         name: string
         date: string
-        status: {type: {name: string}}
+        status: EspnStatus
         competitions: {
             competitors: {
                 homeAway: "home" | "away"
@@ -63,52 +70,62 @@ const mapTeam = (team: EspnTeam): GameTeam => ({
     logo: team.logo,
 })
 
-/** Scheduled NFL games from now through the next seven days, earliest first. */
-const getUpcomingGames = async (): Promise<UpcomingGame[]> => {
-    const now = new Date()
+const mapGame = (event: EspnScoreboard["events"][number]): Game => {
+    const competitors = event.competitions[0]?.competitors
+    const home = competitors?.find(team => team.homeAway === "home")
+    const away = competitors?.find(team => team.homeAway === "away")
 
-    // ESPN groups games by US calendar dates. Include yesterday so late-night
-    // games aren't missed after midnight UTC; filter exact kickoff times below.
-    const start = new Date(now)
-    start.setUTCDate(start.getUTCDate() - 1)
+    if (!home || !away) {
+        throw new Error(`ESPN game ${event.id} is missing a team`)
+    }
 
-    const end = new Date(now)
-    end.setUTCDate(end.getUTCDate() + 7)
+    return {
+        id: event.id,
+        name: event.name,
+        date: event.date,
+        teams: {
+            home: mapTeam(home.team),
+            away: mapTeam(away.team),
+        },
+    }
+}
+
+const getScoreboard = async (
+    start: Date,
+    end: Date,
+): Promise<EspnScoreboard> => {
+    // ESPN groups games by US calendar dates. Include the previous day so
+    // late-night games aren't missed; callers filter exact kickoff times.
+    const queryStart = new Date(start)
+    queryStart.setUTCDate(queryStart.getUTCDate() - 1)
 
     const url = new URL(
-        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
 
     url.searchParams.set(
         "dates",
-        `${formatEspnDate(start)}-${formatEspnDate(end)}`,
+        `${formatEspnDate(queryStart)}-${formatEspnDate(end)}`,
     )
 
     url.searchParams.set("limit", "1000")
-    console.log(url)
 
-    const response = await fetch(url, {
-        headers: {
-            "Accept": "application/json",
-            "User-Agent": "super-bowl-squares",
-        },
-    })
+    const response = await fetch(url)
 
     if (!response.ok) {
-        // Temporary diagnostics: keep upstream response details in server logs.
-        console.error("ESPN scoreboard response", {
-            url: url.href,
-            status: response.status,
-            contentType: response.headers.get("content-type"),
-            server: response.headers.get("server"),
-            requestId: response.headers.get("cf-ray"),
-            body: (await response.text()).slice(0, 2000),
-        })
-
         throw new Error(`ESPN scoreboard request failed: ${response.status}`)
     }
 
-    const scoreboard: EspnScoreboard = await response.json()
+    return response.json()
+}
+
+/** Scheduled NFL games from now through the next seven days, earliest first. */
+const getUpcomingGames = async (): Promise<Game[]> => {
+    const now = new Date()
+    const end = new Date(now)
+    end.setUTCDate(end.getUTCDate() + 7)
+
+    const scoreboard = await getScoreboard(now, end)
 
     return scoreboard.events
         .filter(event => {
@@ -121,25 +138,29 @@ const getUpcomingGames = async (): Promise<UpcomingGame[]> => {
             )
         })
         .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
-        .map(event => {
-            const competitors = event.competitions[0]?.competitors
-            const home = competitors?.find(team => team.homeAway === "home")
-            const away = competitors?.find(team => team.homeAway === "away")
+        .map(mapGame)
+}
 
-            if (!home || !away) {
-                throw new Error(`ESPN game ${event.id} is missing a team`)
-            }
+/** Completed NFL games with kickoffs in the past seven days, newest first. */
+const getRecentGames = async (): Promise<Game[]> => {
+    const now = new Date()
+    const start = new Date(now)
+    start.setUTCDate(start.getUTCDate() - 7)
 
-            return {
-                id: event.id,
-                name: event.name,
-                date: event.date,
-                teams: {
-                    home: mapTeam(home.team),
-                    away: mapTeam(away.team),
-                },
-            }
+    const scoreboard = await getScoreboard(start, now)
+
+    return scoreboard.events
+        .filter(event => {
+            const kickoff = new Date(event.date)
+
+            return (
+                event.status.type.completed &&
+                kickoff >= start &&
+                kickoff <= now
+            )
         })
+        .sort((a, b) => Date.parse(b.date) - Date.parse(a.date))
+        .map(mapGame)
 }
 
 const getSuperBowl = async (): Promise<SuperBowl> => {
@@ -186,5 +207,5 @@ const getSuperBowl = async (): Promise<SuperBowl> => {
     return superBowl
 }
 
-export {getSuperBowl, getUpcomingGames}
-export type {GameTeam, SuperBowl, Team, UpcomingGame}
+export {getRecentGames, getSuperBowl, getUpcomingGames}
+export type {Game, GameTeam, SuperBowl, Team}
