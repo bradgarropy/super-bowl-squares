@@ -1,6 +1,11 @@
 import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
-import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/espn"
+import {
+    getGame,
+    getLiveGames,
+    getRecentGames,
+    getUpcomingGames,
+} from "~/utils/espn"
 
 const homeTeam = {
     id: "6",
@@ -268,6 +273,157 @@ test("propagates HTTP errors when fetching recent games", async () => {
     fetchMock.mockResolvedValue(new Response(null, {status: 503}))
     await expect(getRecentGames()).rejects.toThrow(
         "ESPN scoreboard request failed: 503",
+    )
+})
+
+test("gets game details with cumulative scores at the end of each quarter", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            header: {
+                id: "401874048",
+                competitions: [
+                    {
+                        date: "2026-08-29T00:00Z",
+                        status: {
+                            displayClock: "8:32",
+                            period: 4,
+                            type: {
+                                name: "STATUS_IN_PROGRESS",
+                                state: "in",
+                                completed: false,
+                            },
+                        },
+                        competitors: [
+                            {
+                                homeAway: "away",
+                                score: "17",
+                                linescores: [
+                                    {value: 3},
+                                    {value: 7},
+                                    {value: 7},
+                                    {value: 0},
+                                ],
+                                team: awayTeam,
+                            },
+                            {
+                                homeAway: "home",
+                                score: "27",
+                                linescores: [
+                                    {value: 7},
+                                    {value: 10},
+                                    {value: 7},
+                                    {value: 3},
+                                ],
+                                team: homeTeam,
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    expect(await getGame("401874048")).toEqual({
+        id: "401874048",
+        name: "New Orleans Saints at Dallas Cowboys",
+        date: "2026-08-29T00:00Z",
+        state: "in",
+        quarter: 4,
+        clock: "8:32",
+        score: {home: 27, away: 17},
+        quarterScores: [
+            {quarter: 1, home: 7, away: 3},
+            {quarter: 2, home: 17, away: 10},
+            {quarter: 3, home: 24, away: 17},
+        ],
+        teams: {
+            home: {
+                id: "6",
+                name: "Dallas Cowboys",
+                abbreviation: "DAL",
+                color: "002244",
+                logo: homeTeam.logo,
+            },
+            away: {
+                id: "18",
+                name: "New Orleans Saints",
+                abbreviation: "NO",
+                color: "d3bc8d",
+                logo: awayTeam.logo,
+            },
+        },
+    })
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]))
+    expect(url.origin + url.pathname).toBe(
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary",
+    )
+    expect(url.searchParams.get("event")).toBe("401874048")
+})
+
+test("includes the final score for an overtime period", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            header: {
+                id: "overtime",
+                competitions: [
+                    {
+                        date: "2026-08-29T00:00Z",
+                        status: {
+                            displayClock: "0:00",
+                            period: 5,
+                            type: {
+                                name: "STATUS_FINAL",
+                                state: "post",
+                                completed: true,
+                            },
+                        },
+                        competitors: [
+                            {
+                                homeAway: "home",
+                                score: "27",
+                                linescores: [
+                                    {value: 7},
+                                    {value: 10},
+                                    {value: 0},
+                                    {value: 7},
+                                    {value: 3},
+                                ],
+                                team: homeTeam,
+                            },
+                            {
+                                homeAway: "away",
+                                score: "24",
+                                linescores: [
+                                    {value: 3},
+                                    {value: 7},
+                                    {value: 7},
+                                    {value: 7},
+                                    {value: 0},
+                                ],
+                                team: awayTeam,
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    expect((await getGame("overtime")).quarterScores).toEqual([
+        {quarter: 1, home: 7, away: 3},
+        {quarter: 2, home: 17, away: 10},
+        {quarter: 3, home: 17, away: 17},
+        {quarter: 4, home: 24, away: 24},
+        {quarter: 5, home: 27, away: 24},
+    ])
+})
+
+test("reports an HTTP error when game details cannot be loaded", async () => {
+    fetchMock.mockResolvedValue(new Response(null, {status: 404}))
+
+    await expect(getGame("missing")).rejects.toThrow(
+        "ESPN game summary request failed: 404",
     )
 })
 

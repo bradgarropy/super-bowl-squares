@@ -27,6 +27,27 @@ type Game = {
     }
 }
 
+type QuarterScore = {
+    quarter: number
+    home: number
+    away: number
+}
+
+type LineScore = {
+    value: number
+}
+
+type GameDetails = Game & {
+    state: EspnGameState
+    quarter: number
+    clock: string
+    score: {
+        home: number
+        away: number
+    }
+    quarterScores: QuarterScore[]
+}
+
 // Only the scoreboard fields this module uses, not ESPN's entire response.
 type EspnTeam = {
     id: string
@@ -61,6 +82,25 @@ type EspnScoreboard = {
     }[]
 }
 
+type EspnSummary = {
+    header: {
+        id: string
+        competitions: {
+            date: string
+            status: EspnStatus & {
+                displayClock: string
+                period: number
+            }
+            competitors: {
+                homeAway: "home" | "away"
+                score: string
+                linescores?: LineScore[]
+                team: EspnTeam
+            }[]
+        }[]
+    }
+}
+
 const formatEspnDate = (date: Date) => {
     return date.toISOString().slice(0, 10).replaceAll("-", "")
 }
@@ -86,6 +126,80 @@ const mapGame = (event: EspnScoreboard["events"][number]): Game => {
         id: event.id,
         name: event.name,
         date: event.date,
+        teams: {
+            home: mapTeam(home.team),
+            away: mapTeam(away.team),
+        },
+    }
+}
+
+const getScores = (
+    homeLinescores: LineScore[],
+    awayLinescores: LineScore[],
+    completedQuarters: number,
+): QuarterScore[] => {
+    const quarterScores: QuarterScore[] = []
+    let home = 0
+    let away = 0
+
+    for (let index = 0; index < completedQuarters; index++) {
+        home += homeLinescores[index]?.value ?? 0
+        away += awayLinescores[index]?.value ?? 0
+        quarterScores.push({quarter: index + 1, home, away})
+    }
+
+    return quarterScores
+}
+
+const getGame = async (id: string): Promise<GameDetails> => {
+    const url = new URL(
+        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary",
+    )
+    url.searchParams.set("event", id)
+
+    const response = await fetch(url)
+
+    if (!response.ok) {
+        throw new Error(`ESPN game summary request failed: ${response.status}`)
+    }
+
+    const summary: EspnSummary = await response.json()
+    const competition = summary.header.competitions[0]
+    const home = competition?.competitors.find(team => team.homeAway === "home")
+    const away = competition?.competitors.find(team => team.homeAway === "away")
+
+    if (!competition || !home || !away) {
+        throw new Error(`ESPN game ${id} is missing game details`)
+    }
+
+    const completedQuarters =
+        competition.status.type.state === "post"
+            ? Math.max(
+                  home.linescores?.length ?? 0,
+                  away.linescores?.length ?? 0,
+              )
+            : Math.max(
+                  competition.status.period -
+                      (competition.status.displayClock === "0:00" ? 0 : 1),
+                  0,
+              )
+
+    return {
+        id: summary.header.id,
+        name: `${away.team.displayName} at ${home.team.displayName}`,
+        date: competition.date,
+        state: competition.status.type.state,
+        quarter: competition.status.period,
+        clock: competition.status.displayClock,
+        score: {
+            home: Number(home.score),
+            away: Number(away.score),
+        },
+        quarterScores: getScores(
+            home.linescores ?? [],
+            away.linescores ?? [],
+            completedQuarters,
+        ),
         teams: {
             home: mapTeam(home.team),
             away: mapTeam(away.team),
@@ -221,5 +335,5 @@ const getSuperBowl = async (): Promise<SuperBowl> => {
     return superBowl
 }
 
-export {getLiveGames, getRecentGames, getSuperBowl, getUpcomingGames}
-export type {Game, GameTeam, SuperBowl, Team}
+export {getGame, getLiveGames, getRecentGames, getSuperBowl, getUpcomingGames}
+export type {Game, GameDetails, GameTeam, QuarterScore, SuperBowl, Team}
