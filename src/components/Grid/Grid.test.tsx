@@ -2,16 +2,20 @@ import {render, screen} from "@testing-library/react"
 import {expect, test} from "vitest"
 
 import Grid from "~/components/Grid"
-import type {SuperBowl} from "~/utils/games"
+import type {Game} from "~/utils/games"
 
-const mockTeams: SuperBowl["teams"] = {
+const mockTeams: Game["teams"] = {
     home: {
+        id: "dal",
         name: "Dallas Cowboys",
+        abbreviation: "DAL",
         color: "abcdef",
         logo: "https://nfl.com/cowboys/logo.jpg",
     },
     away: {
+        id: "buf",
         name: "Buffalo Bills",
+        abbreviation: "BUF",
         color: "123456",
         logo: "https://nfl.com/bills/logo.jpg",
     },

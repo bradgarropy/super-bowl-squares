@@ -52,7 +52,7 @@ export const action = async ({request, context}: Route.ActionArgs) => {
     })
 
     const setCookieHeader = await commitSession(session)
-    return redirect("/boards", {headers: {"Set-Cookie": setCookieHeader}})
+    return redirect("/games", {headers: {"Set-Cookie": setCookieHeader}})
 }
 
 const Login = () => {

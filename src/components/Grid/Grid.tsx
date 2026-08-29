@@ -1,14 +1,14 @@
 import type {FC} from "react"
 
-import type {SuperBowl, Team} from "~/utils/games"
+import type {Game, Team} from "~/utils/games"
 
 type GridProps = {
-    teams: SuperBowl["teams"]
+    teams: Game["teams"]
     squares: string[]
 }
 
 type CornerProps = {
-    teams: SuperBowl["teams"]
+    teams: Game["teams"]
 }
 
 type TeamProps = {
