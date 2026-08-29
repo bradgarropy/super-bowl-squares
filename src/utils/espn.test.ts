@@ -1,6 +1,6 @@
 import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
-import {getRecentGames, getUpcomingGames} from "~/utils/espn"
+import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/espn"
 
 const homeTeam = {
     id: "6",
@@ -22,28 +22,38 @@ const createEvent = (
     id = "401874048",
     date = "2026-08-29T00:00Z",
     status = "STATUS_SCHEDULED",
-) => ({
-    id,
-    date,
-    name: "New Orleans Saints at Dallas Cowboys",
-    status: {
-        type: {
-            name: status,
-            completed: ["STATUS_FINAL", "STATUS_FINAL_OVERTIME"].includes(
-                status,
-            ),
+) => {
+    const completed = ["STATUS_FINAL", "STATUS_FINAL_OVERTIME"].includes(status)
+    const state =
+        status === "STATUS_IN_PROGRESS"
+            ? "in"
+            : completed ||
+                ["STATUS_CANCELED", "STATUS_POSTPONED"].includes(status)
+              ? "post"
+              : "pre"
+
+    return {
+        id,
+        date,
+        name: "New Orleans Saints at Dallas Cowboys",
+        status: {
+            type: {
+                name: status,
+                completed,
+                state,
+            },
         },
-    },
-    competitions: [
-        {
-            // Deliberately away-first: ESPN array order isn't a team assignment.
-            competitors: [
-                {homeAway: "away", team: awayTeam},
-                {homeAway: "home", team: homeTeam},
-            ],
-        },
-    ],
-})
+        competitions: [
+            {
+                // Deliberately away-first: ESPN array order isn't a team assignment.
+                competitors: [
+                    {homeAway: "away", team: awayTeam},
+                    {homeAway: "home", team: homeTeam},
+                ],
+            },
+        ],
+    }
+}
 
 const fetchMock = vi.fn<typeof fetch>()
 
@@ -95,7 +105,7 @@ test("requests a date range and returns a small, typed game shape", async () => 
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(url)
 })
 
-test("only returns scheduled games in the next seven days, ordered by kickoff", async () => {
+test("only returns pre-game events in the next seven days, ordered by kickoff", async () => {
     fetchMock.mockResolvedValue(
         Response.json({
             events: [
@@ -202,7 +212,7 @@ test("requests the past week and maps recent games with home and away teams", as
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(url)
 })
 
-test("returns only completed games from the past seven days, newest first", async () => {
+test("returns only post-game events from the past seven days, newest first", async () => {
     fetchMock.mockResolvedValue(
         Response.json({
             events: [
@@ -229,6 +239,8 @@ test("returns only completed games from the past seven days, newest first", asyn
 
     expect((await getRecentGames()).map(game => game.id)).toEqual([
         "latest",
+        "canceled",
+        "postponed",
         "overtime",
         "oldest",
     ])
@@ -257,4 +269,29 @@ test("propagates HTTP errors when fetching recent games", async () => {
     await expect(getRecentGames()).rejects.toThrow(
         "ESPN scoreboard request failed: 503",
     )
+})
+
+test("returns only live games, ordered by kickoff", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            events: [
+                createEvent("later", "2026-08-27T11:00Z", "STATUS_IN_PROGRESS"),
+                createEvent("scheduled"),
+                createEvent("final", undefined, "STATUS_FINAL"),
+                createEvent(
+                    "earlier",
+                    "2026-08-27T10:00Z",
+                    "STATUS_IN_PROGRESS",
+                ),
+            ],
+        }),
+    )
+
+    expect((await getLiveGames()).map(game => game.id)).toEqual([
+        "earlier",
+        "later",
+    ])
+
+    const url = new URL(String(fetchMock.mock.calls[0][0]))
+    expect(url.searchParams.get("dates")).toBe("20260826-20260827")
 })

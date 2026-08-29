@@ -36,10 +36,13 @@ type EspnTeam = {
     logo: string
 }
 
+type EspnGameState = "pre" | "in" | "post"
+
 type EspnStatus = {
     type: {
         name: string
         completed: boolean
+        state: EspnGameState
     }
 }
 
@@ -119,7 +122,18 @@ const getScoreboard = async (
     return response.json()
 }
 
-/** Scheduled NFL games from now through the next seven days, earliest first. */
+/** NFL games currently in progress. */
+const getLiveGames = async (): Promise<Game[]> => {
+    const now = new Date()
+    const scoreboard = await getScoreboard(now, now)
+
+    return scoreboard.events
+        .filter(event => event.status.type.state === "in")
+        .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+        .map(mapGame)
+}
+
+/** Pre-game NFL events from now through the next seven days, earliest first. */
 const getUpcomingGames = async (): Promise<Game[]> => {
     const now = new Date()
     const end = new Date(now)
@@ -132,7 +146,7 @@ const getUpcomingGames = async (): Promise<Game[]> => {
             const kickoff = new Date(event.date)
 
             return (
-                event.status.type.name === "STATUS_SCHEDULED" &&
+                event.status.type.state === "pre" &&
                 kickoff >= now &&
                 kickoff <= end
             )
@@ -141,7 +155,7 @@ const getUpcomingGames = async (): Promise<Game[]> => {
         .map(mapGame)
 }
 
-/** Completed NFL games with kickoffs in the past seven days, newest first. */
+/** Post-game NFL events with kickoffs in the past seven days, newest first. */
 const getRecentGames = async (): Promise<Game[]> => {
     const now = new Date()
     const start = new Date(now)
@@ -154,7 +168,7 @@ const getRecentGames = async (): Promise<Game[]> => {
             const kickoff = new Date(event.date)
 
             return (
-                event.status.type.completed &&
+                event.status.type.state === "post" &&
                 kickoff >= start &&
                 kickoff <= now
             )
@@ -207,5 +221,5 @@ const getSuperBowl = async (): Promise<SuperBowl> => {
     return superBowl
 }
 
-export {getRecentGames, getSuperBowl, getUpcomingGames}
+export {getLiveGames, getRecentGames, getSuperBowl, getUpcomingGames}
 export type {Game, GameTeam, SuperBowl, Team}
