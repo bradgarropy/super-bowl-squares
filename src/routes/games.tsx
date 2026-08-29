@@ -1,6 +1,6 @@
 import {Link} from "react-router"
 
-import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/espn"
+import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/games"
 
 import type {Route} from "./+types/games"
 
