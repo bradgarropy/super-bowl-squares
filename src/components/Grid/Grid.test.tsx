@@ -2,7 +2,7 @@ import {render, screen} from "@testing-library/react"
 import {expect, test} from "vitest"
 
 import Grid from "~/components/Grid"
-import type {SuperBowl} from "~/utils/espn"
+import type {SuperBowl} from "~/utils/games"
 
 const mockTeams: SuperBowl["teams"] = {
     home: {

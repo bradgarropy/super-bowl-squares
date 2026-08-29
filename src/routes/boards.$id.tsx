@@ -6,7 +6,7 @@ import Grid from "~/components/Grid"
 import {assignSquares} from "~/utils/assign"
 import {requireUser} from "~/utils/auth.server"
 import {getBoard} from "~/utils/boards"
-import {getSuperBowl} from "~/utils/espn"
+import {getSuperBowl} from "~/utils/games"
 
 import type {Route} from "./+types/boards.$id"
 

@@ -1,6 +1,6 @@
 import type {FC} from "react"
 
-import type {SuperBowl, Team} from "~/utils/espn"
+import type {SuperBowl, Team} from "~/utils/games"
 
 type GridProps = {
     teams: SuperBowl["teams"]
