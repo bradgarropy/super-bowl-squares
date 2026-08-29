@@ -1,3 +1,5 @@
+import {Link} from "react-router"
+
 import {getRecentGames, getUpcomingGames} from "~/utils/espn"
 
 import type {Route} from "./+types/games"
@@ -35,7 +37,12 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                             {recentGames.map(game => (
                                 <li key={game.id}>
                                     <h3 className="font-semibold">
-                                        {game.name}
+                                        <Link
+                                            to={`/games/${game.id}`}
+                                            className="underline underline-offset-4"
+                                        >
+                                            {game.name}
+                                        </Link>
                                     </h3>
                                     <time dateTime={game.date}>
                                         {new Date(game.date).toUTCString()}
@@ -58,7 +65,12 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                             {upcomingGames.map(game => (
                                 <li key={game.id}>
                                     <h3 className="font-semibold">
-                                        {game.name}
+                                        <Link
+                                            to={`/games/${game.id}`}
+                                            className="underline underline-offset-4"
+                                        >
+                                            {game.name}
+                                        </Link>
                                     </h3>
                                     <time dateTime={game.date}>
                                         {new Date(game.date).toUTCString()}
