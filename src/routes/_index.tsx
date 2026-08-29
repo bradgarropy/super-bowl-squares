@@ -1,19 +1,9 @@
-import type {Route} from "./+types/_index"
+import {redirect} from "react-router"
 
-export const meta: Route.MetaFunction = () => {
-    return [
-        {
-            title: "🏈 super bowl squares | home",
-        },
-    ]
+export const loader = () => {
+    return redirect("/games")
 }
 
-const Home = () => {
-    return (
-        <>
-            <h1>Make your own Super Bowl Squares and play with friends!</h1>
-        </>
-    )
+export default function Home() {
+    return null
 }
-
-export default Home
