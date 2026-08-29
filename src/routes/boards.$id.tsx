@@ -5,24 +5,16 @@ import {useEffect, useRef, useState} from "react"
 import Grid from "~/components/Grid"
 import {assignSquares} from "~/utils/assign"
 import {requireUser} from "~/utils/auth.server"
-import {getBoard} from "~/utils/boards"
-import {getSuperBowl} from "~/utils/games"
+import {getGame} from "~/utils/games"
 
 import type {Route} from "./+types/boards.$id"
 
 export const loader = async ({request, params}: Route.LoaderArgs) => {
     await requireUser(request)
-    const board = getBoard(Number(params.id))
-    const superBowl = await getSuperBowl()
-
-    return {
-        board,
-        superBowl,
-    }
+    return getGame(params.id)
 }
 
-const Board = ({loaderData}: Route.ComponentProps) => {
-    const {superBowl} = loaderData
+const Board = ({loaderData: game}: Route.ComponentProps) => {
     const [name, setName] = useState<string>("")
     const [names, setNames] = useState<string[]>([])
     const [squares, setSquares] = useState<string[]>([])
@@ -53,7 +45,7 @@ const Board = ({loaderData}: Route.ComponentProps) => {
 
     return (
         <div className="grid grid-flow-col justify-start gap-x-12">
-            <Grid teams={superBowl.teams} squares={squares} />
+            <Grid teams={game.teams} squares={squares} />
 
             <section>
                 <form onSubmit={handleAddName} className="mb-12">

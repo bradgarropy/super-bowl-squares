@@ -8,23 +8,12 @@ import {
     getSummary,
 } from "~/utils/espn"
 
-type SuperBowl = {
-    title: string
-    teams: {
-        home: Team
-        away: Team
-    }
-}
-
 type Team = {
+    id: string
     name: string
+    abbreviation: string
     color: string
     logo: string
-}
-
-type GameTeam = Team & {
-    id: string
-    abbreviation: string
 }
 
 type Game = {
@@ -32,8 +21,8 @@ type Game = {
     name: string
     date: string
     teams: {
-        home: GameTeam
-        away: GameTeam
+        home: Team
+        away: Team
     }
 }
 
@@ -54,7 +43,7 @@ type GameDetails = Game & {
     quarterScores: QuarterScore[]
 }
 
-const createTeam = (team: EspnScoreboardTeam | EspnSummaryTeam): GameTeam => ({
+const createTeam = (team: EspnScoreboardTeam | EspnSummaryTeam): Team => ({
     id: team.id,
     name: team.displayName,
     abbreviation: team.abbreviation,
@@ -210,49 +199,5 @@ const getRecentGames = async (): Promise<Game[]> => {
         .map(createGame)
 }
 
-const getSuperBowl = async (): Promise<SuperBowl> => {
-    // const res = await fetch(
-    //     "http://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
-    // )
-
-    // const json = await res.json()
-
-    // const game = json.events[0].competitions[0]
-    // const title = game.notes[0].headline
-
-    // const homeTeam = game.competitors.find(
-    //     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    //     (competitor: any) => competitor.homeAway === "home",
-    // ).team
-
-    // const awayTeam = game.competitors.find(
-    //     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    //     (competitor: any) => competitor.homeAway === "away",
-    // ).team
-
-    const superBowl: SuperBowl = {
-        title: "Super bowl",
-        teams: {
-            home: {
-                name: "Cowboys",
-                color: "00008B",
-                logo: "foo.jpg",
-                // name: homeTeam.displayName,
-                // color: homeTeam.color,
-                // logo: homeTeam.logo,
-            },
-            away: {
-                name: "Eagles",
-                color: "2E8B57",
-                logo: "foo.jpg",
-                // name: awayTeam.displayName,
-                // color: awayTeam.color,
-                // logo: awayTeam.logo,
-            },
-        },
-    }
-    return superBowl
-}
-
-export {getGame, getLiveGames, getRecentGames, getSuperBowl, getUpcomingGames}
-export type {Game, GameDetails, GameTeam, QuarterScore, SuperBowl, Team}
+export {getGame, getLiveGames, getRecentGames, getUpcomingGames}
+export type {Game, GameDetails, QuarterScore, Team}
