@@ -1,11 +1,13 @@
-import {render, screen} from "@testing-library/react"
+import {cleanup, render, screen} from "@testing-library/react"
 import {createMemoryRouter} from "react-router"
 import {RouterProvider} from "react-router/dom"
-import {expect, test} from "vitest"
+import {afterEach, expect, test} from "vitest"
 
 import Header from "~/components/Header"
 
-test("renders", () => {
+afterEach(cleanup)
+
+const renderHeader = (user: object | null) => {
     const router = createMemoryRouter(
         [
             {
@@ -17,13 +19,24 @@ test("renders", () => {
         {
             hydrationData: {
                 loaderData: {
-                    root: {user: null},
+                    root: {user},
                 },
             },
         },
     )
 
     render(<RouterProvider router={router} />)
+}
 
-    expect(screen.getByText("Super Bowl Squares"))
+test("shows a login link when logged out", () => {
+    renderHeader(null)
+
+    expect(screen.getByText("Super Bowl Squares")).toBeTruthy()
+    expect(screen.getByRole("link", {name: "login"})).toBeTruthy()
+})
+
+test("shows a logout button when logged in", () => {
+    renderHeader({id: 1})
+
+    expect(screen.getByRole("button", {name: "logout"})).toBeTruthy()
 })

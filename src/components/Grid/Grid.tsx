@@ -1,175 +1,123 @@
-import type {FC} from "react"
+import {cn} from "~/utils/cn"
+import type {Game} from "~/utils/games"
 
-import type {Game, Team} from "~/utils/games"
+const digits = Array.from({length: 10}, (_, digit) => digit)
 
 type GridProps = {
     teams: Game["teams"]
-    squares: string[]
+    winner: {
+        row: number
+        column: number
+    } | null
 }
 
-type CornerProps = {
-    teams: Game["teams"]
-}
+const Grid = ({teams, winner}: GridProps) => {
+    const isWinningSquare = (row: number, column: number) => {
+        return row === winner?.row && column === winner.column
+    }
 
-type TeamProps = {
-    team: Team
-}
-
-const Corner: FC<CornerProps> = ({teams}) => {
     return (
-        <span
-            style={{
-                background: `linear-gradient(45deg, #${teams.away.color} 50%, #${teams.home.color} 50%)`,
-            }}
-            className="col-start-1 row-start-1"
-        />
-    )
-}
+        <div className="max-w-full overflow-x-auto pb-4">
+            <div className="w-max min-w-full">
+                <div className="mx-auto grid w-fit grid-cols-[5rem_auto_5rem] grid-rows-[5rem_auto]">
+                    <div className="col-start-2 flex items-center justify-center">
+                        <img
+                            src={teams.home.logo}
+                            alt={teams.home.name}
+                            className="size-14 object-contain"
+                        />
+                    </div>
 
-const SubCorner: FC = () => {
-    return <span className="col-start-2 row-start-2 bg-gray-400"></span>
-}
+                    <div className="col-start-1 row-start-2 flex translate-y-8 items-center justify-center self-center">
+                        <img
+                            src={teams.away.logo}
+                            alt={teams.away.name}
+                            className="size-14 object-contain"
+                        />
+                    </div>
 
-const HomeTeam: FC<TeamProps> = ({team}) => {
-    return (
-        <div
-            style={{backgroundColor: `#${team.color}`}}
-            className={
-                "col-start-2 row-start-1 col-span-11 p-4 font-extrabold grid grid-flow-col gap-x-2 justify-center items-center"
-            }
-        >
-            <img
-                src={team.logo}
-                alt={team.name}
-                width="500"
-                height="500"
-                className="w-10"
-            />
+                    <div className="col-start-2 row-start-2">
+                        <table className="border-separate border-spacing-px">
+                            <caption className="sr-only">
+                                {teams.away.name} at {teams.home.name} squares
+                                board
+                            </caption>
+                            <tbody>
+                                <tr>
+                                    <th
+                                        aria-label="Board corner"
+                                        className="size-16 bg-black/30"
+                                    />
+                                    {digits.map(column => (
+                                        <th
+                                            key={column}
+                                            scope="col"
+                                            style={{
+                                                backgroundColor: `#${teams.home.color}`,
+                                            }}
+                                            className={cn(
+                                                "size-16 p-2 text-sm transition-all",
+                                                winner?.column === column
+                                                    ? "brightness-150"
+                                                    : "",
+                                            )}
+                                        >
+                                            {column}
+                                        </th>
+                                    ))}
+                                </tr>
+                                {digits.map(row => (
+                                    <tr key={row}>
+                                        <th
+                                            scope="row"
+                                            style={{
+                                                backgroundColor: `#${teams.away.color}`,
+                                            }}
+                                            className={cn(
+                                                "size-16 p-2 text-sm transition-all",
+                                                winner?.row === row
+                                                    ? "brightness-150"
+                                                    : "",
+                                            )}
+                                        >
+                                            {row}
+                                        </th>
 
-            <span>{team.name}</span>
-        </div>
-    )
-}
+                                        {digits.map(column => {
+                                            const isWinner = isWinningSquare(
+                                                row,
+                                                column,
+                                            )
 
-const AwayTeam: FC<TeamProps> = ({team}) => {
-    return (
-        <div
-            style={{backgroundColor: `#${team.color}`}}
-            className="col-start-1 row-start-2 row-span-11 p-4 font-extrabold [writing-mode:_vertical-lr] bg-gray-600 grid grid-flow-col gap-x-2 justify-center items-center"
-        >
-            <span className="rotate-180">{team.name}</span>
+                                            return (
+                                                <td
+                                                    key={column}
+                                                    aria-label={
+                                                        isWinner
+                                                            ? `Winning square: row ${row}, column ${column}`
+                                                            : `Row ${row}, column ${column}`
+                                                    }
+                                                    className={cn(
+                                                        "size-16 bg-black/10",
+                                                        isWinner
+                                                            ? "relative z-10 scale-105 bg-yellow-400/30 ring-4 ring-inset ring-yellow-400"
+                                                            : "",
+                                                    )}
+                                                />
+                                            )
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
 
-            <img
-                src={team.logo}
-                alt={team.name}
-                width="500"
-                height="500"
-                className="w-10 -rotate-90"
-            />
-        </div>
-    )
-}
-
-const HorizontalHeader = () => {
-    return (
-        <>
-            <div className="col-start-3 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>0</span>
+                    <div
+                        aria-hidden="true"
+                        className="col-start-3 row-start-2"
+                    />
+                </div>
             </div>
-            <div className="col-start-4 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>1</span>
-            </div>
-            <div className="col-start-5 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>2</span>
-            </div>
-            <div className="col-start-6 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>3</span>
-            </div>
-            <div className="col-start-7 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>4</span>
-            </div>
-            <div className="col-start-8 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>5</span>
-            </div>
-            <div className="col-start-9 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>6</span>
-            </div>
-            <div className="col-start-10 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>7</span>
-            </div>
-            <div className="col-start-11 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>8</span>
-            </div>
-            <div className="col-start-12 row-start-2 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>9</span>
-            </div>
-        </>
-    )
-}
-
-const VerticalHeader = () => {
-    return (
-        <>
-            <div className="col-start-2 row-start-3 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>0</span>
-            </div>
-            <div className="col-start-2 row-start-4 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>1</span>
-            </div>
-            <div className="col-start-2 row-start-5 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>2</span>
-            </div>
-            <div className="col-start-2 row-start-6 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>3</span>
-            </div>
-            <div className="col-start-2 row-start-7 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>4</span>
-            </div>
-            <div className="col-start-2 row-start-8 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>5</span>
-            </div>
-            <div className="col-start-2 row-start-9 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>6</span>
-            </div>
-            <div className="col-start-2 row-start-10 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>7</span>
-            </div>
-            <div className="col-start-2 row-start-11 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>8</span>
-            </div>
-            <div className="col-start-2 row-start-12 bg-gray-400 text-black p-2 font-bold grid place-items-center">
-                <span>9</span>
-            </div>
-        </>
-    )
-}
-
-const Grid: FC<GridProps> = ({teams, squares}) => {
-    return (
-        <div className="justify-center w-fit m-auto grid grid-cols-squares grid-rows-squares border-white border-4 tabular-nums bg-white text-center">
-            {/* corners */}
-            <Corner teams={teams} />
-            <SubCorner />
-
-            {/* teams */}
-            <HomeTeam team={teams.home} />
-            <AwayTeam team={teams.away} />
-
-            {/* headers */}
-            <HorizontalHeader />
-            <VerticalHeader />
-
-            {/* data */}
-            {squares.map((square, index) => {
-                return (
-                    <span
-                        key={index}
-                        className="text-black p-2 place-self-center"
-                    >
-                        {square}
-                    </span>
-                )
-            })}
         </div>
     )
 }
