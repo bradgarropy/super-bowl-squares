@@ -32,7 +32,7 @@ const main = async () => {
         await db.batch([
             db.delete(users),
             // Reset SQLite's auto-increment counter so seeded IDs start at 1.
-            db.run(sql`delete from sqlite_sequence where name = 'User'`),
+            db.run(sql`delete from sqlite_sequence where name = 'legacy_user'`),
             db.insert(users).values(
                 userSeeds.map(user => ({
                     ...user,

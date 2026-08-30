@@ -2,7 +2,7 @@ import {sql} from "drizzle-orm"
 import {integer, sqliteTable, text, uniqueIndex} from "drizzle-orm/sqlite-core"
 
 const users = sqliteTable(
-    "User",
+    "legacy_user",
     {
         id: integer("id").primaryKey({autoIncrement: true}),
         firstName: text("firstName").notNull(),

@@ -4,8 +4,8 @@
   "id": "94ccbb6f-dd51-40cd-adef-3ab33faefcfe",
   "prevId": "3f8f7fbb-9c50-4f63-ad9e-3b1d4e68cb8f",
   "tables": {
-    "User": {
-      "name": "User",
+    "legacy_user": {
+      "name": "legacy_user",
       "columns": {
         "id": {
           "name": "id",

@@ -1,3 +1,4 @@
+ALTER TABLE `User` RENAME TO `legacy_user`;--> statement-breakpoint
 CREATE TABLE `account` (
 	`id` text PRIMARY KEY NOT NULL,
 	`issuer` text NOT NULL,
