@@ -20,4 +20,5 @@ const users = sqliteTable(
     table => [uniqueIndex("User_email_key").on(table.email)],
 )
 
+export * from "~/db/auth"
 export {users}
