@@ -4,6 +4,7 @@ import {index, route} from "@react-router/dev/routes"
 const routes: RouteConfig = [
     index("routes/_index.tsx"),
     route("account", "routes/account.tsx"),
+    route("api/auth/*", "routes/api.auth.$.ts"),
     route("games", "routes/games.tsx"),
     route("games/:id", "routes/games.$id.tsx"),
     route("login", "routes/login.tsx"),
