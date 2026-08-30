@@ -1,5 +1,6 @@
 import {Link} from "react-router"
 
+import DateTime from "~/components/DateTime"
 import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/games"
 
 import type {Route} from "./+types/games"
@@ -45,9 +46,7 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                                             {game.name}
                                         </Link>
                                     </h3>
-                                    <time dateTime={game.date}>
-                                        {new Date(game.date).toUTCString()}
-                                    </time>
+                                    <DateTime date={game.date} />
                                 </li>
                             ))}
                         </ul>
@@ -73,9 +72,7 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                                             {game.name}
                                         </Link>
                                     </h3>
-                                    <time dateTime={game.date}>
-                                        {new Date(game.date).toUTCString()}
-                                    </time>
+                                    <DateTime date={game.date} />
                                 </li>
                             ))}
                         </ul>
@@ -101,9 +98,7 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                                             {game.name}
                                         </Link>
                                     </h3>
-                                    <time dateTime={game.date}>
-                                        {new Date(game.date).toUTCString()}
-                                    </time>
+                                    <DateTime date={game.date} />
                                 </li>
                             ))}
                         </ul>

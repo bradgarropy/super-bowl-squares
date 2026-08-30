@@ -440,6 +440,162 @@ test("reports an HTTP error when game details cannot be loaded", async () => {
     )
 })
 
+test("reports game details with no competition", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({header: {id: "missing", competitions: []}}),
+    )
+
+    await expect(getGame("missing")).rejects.toThrow(
+        "ESPN game missing is missing game details",
+    )
+})
+
+test("reports game details with a missing home or away team", async () => {
+    const competition = {
+        date: "2026-08-29T00:00Z",
+        status: {
+            displayClock: "0:00",
+            period: 0,
+            type: {
+                name: "STATUS_SCHEDULED",
+                state: "pre",
+                completed: false,
+            },
+        },
+    }
+
+    fetchMock.mockResolvedValueOnce(
+        Response.json({
+            header: {
+                id: "missing-home",
+                competitions: [
+                    {
+                        ...competition,
+                        competitors: [
+                            {
+                                homeAway: "away",
+                                score: "0",
+                                team: awayTeamSummary,
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+    fetchMock.mockResolvedValueOnce(
+        Response.json({
+            header: {
+                id: "missing-away",
+                competitions: [
+                    {
+                        ...competition,
+                        competitors: [
+                            {
+                                homeAway: "home",
+                                score: "0",
+                                team: homeTeamSummary,
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    await expect(getGame("missing-home")).rejects.toThrow(
+        "ESPN game missing-home is missing game details",
+    )
+    await expect(getGame("missing-away")).rejects.toThrow(
+        "ESPN game missing-away is missing game details",
+    )
+})
+
+test("handles completed games without line scores or team logos", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            header: {
+                id: "no-linescores",
+                competitions: [
+                    {
+                        date: "2026-08-29T00:00Z",
+                        status: {
+                            displayClock: "0:00",
+                            period: 4,
+                            type: {
+                                name: "STATUS_FINAL",
+                                state: "post",
+                                completed: true,
+                            },
+                        },
+                        competitors: [
+                            {
+                                homeAway: "home",
+                                score: "0",
+                                team: {...homeSummaryTeam, logos: []},
+                            },
+                            {
+                                homeAway: "away",
+                                score: "0",
+                                team: {...awaySummaryTeam, logos: []},
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    const game = await getGame("no-linescores")
+
+    expect(game.quarterScores).toEqual([])
+    expect(game.teams.home.logo).toBe("")
+    expect(game.teams.away.logo).toBe("")
+})
+
+test("fills missing quarter scores with zero", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            header: {
+                id: "missing-quarter",
+                competitions: [
+                    {
+                        date: "2026-08-29T00:00Z",
+                        status: {
+                            displayClock: "0:00",
+                            period: 2,
+                            type: {
+                                name: "STATUS_IN_PROGRESS",
+                                state: "in",
+                                completed: false,
+                            },
+                        },
+                        competitors: [
+                            {
+                                homeAway: "home",
+                                score: "7",
+                                linescores: [{displayValue: "7"}, null],
+                                team: homeTeamSummary,
+                            },
+                            {
+                                homeAway: "away",
+                                score: "3",
+                                linescores: [{displayValue: "3"}, null],
+                                team: awayTeamSummary,
+                            },
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    expect((await getGame("missing-quarter")).quarterScores).toEqual([
+        {quarter: 1, home: 7, away: 3},
+        {quarter: 2, home: 7, away: 3},
+    ])
+})
+
 test("returns only live games, ordered by kickoff", async () => {
     fetchMock.mockResolvedValue(
         Response.json({
