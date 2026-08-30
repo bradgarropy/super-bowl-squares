@@ -20,7 +20,6 @@ const auth = betterAuth({
     rateLimit: {
         storage: "database",
     },
-    secret: env.SESSION_SECRET,
 })
 
 export {auth}
