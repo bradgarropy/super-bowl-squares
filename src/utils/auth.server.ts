@@ -4,6 +4,13 @@ import {env} from "cloudflare:workers"
 import {drizzle} from "drizzle-orm/d1"
 
 const auth = betterAuth({
+    baseURL: {
+        allowedHosts: [
+            "localhost:*",
+            "*.bradgarropy.com",
+            "*.bradgarropy.workers.dev",
+        ],
+    },
     database: drizzleAdapter(drizzle(env.DB), {
         provider: "sqlite",
     }),
