@@ -51,8 +51,10 @@
         "typegen": "react-router typegen && wrangler types"
     },
     "dependencies": {
+        "@better-auth/drizzle-adapter": "^1.7.2",
         "array-shuffle": "^3.0.0",
         "bcryptjs": "^3.0.3",
+        "better-auth": "^1.7.2",
         "clsx": "^2.1.1",
         "drizzle-orm": "^0.45.2",
         "isbot": "^5.1.1",
