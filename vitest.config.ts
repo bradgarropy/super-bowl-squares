@@ -19,7 +19,7 @@ const config = defineConfig({
         environment: "jsdom",
         globals: false,
         passWithNoTests: true,
-        setupFiles: [],
+        setupFiles: ["./src/tests/setup.ts"],
         watch: false,
     },
 })
