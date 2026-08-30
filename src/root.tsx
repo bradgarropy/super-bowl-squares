@@ -42,7 +42,7 @@ const App = () => {
             </head>
 
             <body className="bg-green-800 text-white">
-                <div className="min-h-screen grid grid-rows-layout">
+                <div className="grid min-h-screen grid-rows-[auto_1fr_auto]">
                     <Header />
 
                     <div className="p-8">

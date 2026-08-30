@@ -33,7 +33,7 @@ const Scoreboard = ({game}: ScoreboardProps) => {
                     <span className="font-bold">
                         {game.teams.away.abbreviation}
                     </span>
-                    <span className="text-4xl font-bold tabular-nums">
+                    <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
                         {game.score.away}
                     </span>
                 </div>
@@ -48,7 +48,7 @@ const Scoreboard = ({game}: ScoreboardProps) => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <span className="text-4xl font-bold tabular-nums">
+                    <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
                         {game.score.home}
                     </span>
                     <span className="font-bold">
