@@ -31,6 +31,7 @@
         "url": "https://github.com/bradgarropy/super-bowl-squares"
     },
     "scripts": {
+        "auth:generate": "npx auth@latest generate --config ./src/utils/auth.server.ts --output ./src/db/auth.ts",
         "build": "react-router build",
         "contributors": "all-contributors generate",
         "db:check": "drizzle-kit check",
