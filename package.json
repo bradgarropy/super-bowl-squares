@@ -39,7 +39,6 @@
         "db:migrate:dev": "wrangler d1 migrations apply DB --local",
         "db:migrate:prod": "wrangler d1 migrations apply DB --remote",
         "db:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
-        "db:seed": "tsx src/db/seed.ts",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
         "lint": "eslint .",
@@ -54,7 +53,6 @@
     "dependencies": {
         "@better-auth/drizzle-adapter": "^1.7.2",
         "array-shuffle": "^3.0.0",
-        "bcryptjs": "^3.0.3",
         "better-auth": "^1.7.2",
         "clsx": "^2.1.1",
         "drizzle-orm": "^0.45.2",

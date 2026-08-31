@@ -15,6 +15,13 @@
       "when": 1788130137486,
       "tag": "0001_hot_thunderbolt_ross",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1788142479657,
+      "tag": "0002_icy_namor",
+      "breakpoints": true
     }
   ]
 }
