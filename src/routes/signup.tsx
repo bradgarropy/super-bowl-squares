@@ -1,75 +1,52 @@
-import bcrypt from "bcryptjs"
-import {eq} from "drizzle-orm"
-import {Form, redirect} from "react-router"
+import {isAPIError} from "better-auth/api"
+import {data, Form, redirect, useActionData} from "react-router"
 
-import {dbCtx} from "~/db/client.server"
-import {users} from "~/db/schema"
-import {commitSession, getSession} from "~/utils/session.server"
+import {auth} from "~/utils/auth.server"
 
 import type {Route} from "./+types/signup"
 
-export const action = async ({request, context}: Route.ActionArgs) => {
-    console.log("signup")
-
-    const db = context.get(dbCtx)
+export const action = async ({request}: Route.ActionArgs) => {
     const formData = await request.formData()
 
-    const firstName = formData.get("firstName") as string
-    const lastName = formData.get("lastName") as string
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
-    const passwordConfirmation = formData.get("passwordConfirmation")
+    const firstName = String(formData.get("firstName") ?? "")
+    const lastName = String(formData.get("lastName") ?? "")
+    const email = String(formData.get("email") ?? "")
+    const password = String(formData.get("password") ?? "")
+    const passwordConfirmation = String(
+        formData.get("passwordConfirmation") ?? "",
+    )
 
-    // check if email is already taken
-    const existingUser = await db.query.users.findFirst({
-        columns: {id: true},
-        where: eq(users.email, email),
-    })
-
-    if (existingUser) {
-        console.log("email already exists")
-        throw redirect("/signup")
-    }
-
-    // check if password and passwordConfirmation match
     if (password !== passwordConfirmation) {
-        console.log("passwords dont match")
-        throw redirect("/signup")
+        return data({error: "Passwords do not match."}, {status: 400})
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
-
-    // create user
-    const [user] = await db
-        .insert(users)
-        .values({
-            firstName,
-            lastName,
-            email,
-            password: hashedPassword,
-        })
-        .returning({
-            id: users.id,
-            firstName: users.firstName,
-            lastName: users.lastName,
-            email: users.email,
+    try {
+        const {headers} = await auth.api.signUpEmail({
+            body: {
+                email,
+                name: `${firstName} ${lastName}`,
+                password,
+            },
+            headers: request.headers,
+            returnHeaders: true,
         })
 
-    if (!user) {
-        throw new Error("Failed to create user")
+        return redirect("/games", {headers})
+    } catch (error) {
+        if (isAPIError(error)) {
+            return data(
+                {error: error.body?.message ?? "Unable to create account."},
+                {status: error.statusCode},
+            )
+        }
+
+        throw error
     }
-
-    // set session
-    const session = await getSession(request.headers.get("Cookie"))
-    session.set("user", user)
-    const setCookieHeader = await commitSession(session)
-
-    return redirect("/games", {
-        headers: {"Set-Cookie": setCookieHeader},
-    })
 }
 
 const Signup = () => {
+    const actionData = useActionData<typeof action>()
+
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">signup</h1>
@@ -142,6 +119,10 @@ const Signup = () => {
                 <button type="submit" className="mt-4 justify-self-end">
                     signup
                 </button>
+
+                {actionData?.error ? (
+                    <p role="alert">{actionData.error}</p>
+                ) : null}
             </Form>
         </div>
     )
