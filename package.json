@@ -39,6 +39,7 @@
         "db:migrate:dev": "wrangler d1 migrations apply DB --local",
         "db:migrate:prod": "wrangler d1 migrations apply DB --remote",
         "db:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
+        "db:seed": "tsx --env-file=.env src/db/seed.ts",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
         "lint": "eslint .",
