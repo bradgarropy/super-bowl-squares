@@ -3,7 +3,7 @@ import {Links, Meta, Outlet, Scripts, ScrollRestoration} from "react-router"
 import Footer from "~/components/Footer/Footer"
 import Header from "~/components/Header/Header"
 import tailwindStyles from "~/styles/tailwind.css?url"
-import {getSession} from "~/utils/session.server"
+import {auth} from "~/utils/auth.server"
 
 import type {Route} from "./+types/root"
 
@@ -27,8 +27,8 @@ const links: Route.LinksFunction = () => {
 }
 
 export const loader = async ({request}: Route.LoaderArgs) => {
-    const session = await getSession(request.headers.get("Cookie"))
-    const user = session.get("user")
+    const session = await auth.api.getSession({headers: request.headers})
+    const user = session?.user ?? null
 
     return {user}
 }
