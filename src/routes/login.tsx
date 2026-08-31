@@ -43,7 +43,7 @@ const Login = () => {
                     <label htmlFor="email">email</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="email"
                         name="email"
                         id="email"
@@ -55,7 +55,7 @@ const Login = () => {
                     <label htmlFor="password">password</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="password"
                         name="password"
                         id="password"

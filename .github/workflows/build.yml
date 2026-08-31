@@ -22,5 +22,3 @@ jobs:
               run: npm ci
             - name: "🏗️ build"
               run: npm run build
-              env:
-                  SESSION_SECRET: ${{ secrets.SESSION_SECRET }}

@@ -3,6 +3,8 @@ import {betterAuth} from "better-auth/minimal"
 import {env} from "cloudflare:workers"
 import {drizzle} from "drizzle-orm/d1"
 
+import * as schema from "~/db/auth"
+
 const auth = betterAuth({
     baseURL: {
         allowedHosts: [
@@ -13,6 +15,7 @@ const auth = betterAuth({
     },
     database: drizzleAdapter(drizzle(env.DB), {
         provider: "sqlite",
+        schema,
     }),
     emailAndPassword: {
         enabled: true,

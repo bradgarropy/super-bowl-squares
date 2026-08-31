@@ -57,7 +57,7 @@ const Signup = () => {
                         <label htmlFor="firstName">first name</label>
 
                         <input
-                            className="text-black"
+                            className="bg-white text-black"
                             type="text"
                             name="firstName"
                             id="firstName"
@@ -69,7 +69,7 @@ const Signup = () => {
                         <label htmlFor="lastName">last name</label>
 
                         <input
-                            className="text-black"
+                            className="bg-white text-black"
                             type="text"
                             name="lastName"
                             id="lastName"
@@ -82,7 +82,7 @@ const Signup = () => {
                     <label htmlFor="email">email</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="email"
                         name="email"
                         id="email"
@@ -94,7 +94,7 @@ const Signup = () => {
                     <label htmlFor="password">password</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="password"
                         name="password"
                         id="password"
@@ -108,7 +108,7 @@ const Signup = () => {
                     </label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="password"
                         name="passwordConfirmation"
                         id="passwordConfirmation"
