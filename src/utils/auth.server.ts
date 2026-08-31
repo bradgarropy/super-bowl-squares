@@ -1,16 +1,39 @@
+import {drizzleAdapter} from "@better-auth/drizzle-adapter"
+import {betterAuth} from "better-auth/minimal"
+import {env} from "cloudflare:workers"
+import {drizzle} from "drizzle-orm/d1"
 import {redirect} from "react-router"
 
-import {getSession} from "~/utils/session.server"
+import * as schema from "~/db/auth"
+
+const auth = betterAuth({
+    baseURL: {
+        allowedHosts: [
+            "localhost:*",
+            "*.bradgarropy.com",
+            "*.bradgarropy.workers.dev",
+        ],
+    },
+    database: drizzleAdapter(drizzle(env.DB), {
+        provider: "sqlite",
+        schema,
+    }),
+    emailAndPassword: {
+        enabled: true,
+    },
+    rateLimit: {
+        storage: "database",
+    },
+})
 
 const requireUser = async (request: Request) => {
-    const session = await getSession(request.headers.get("Cookie"))
-    const user = session.get("user")
+    const session = await auth.api.getSession({headers: request.headers})
 
-    if (!user) {
+    if (!session) {
         throw redirect("/login")
     }
 
-    return user
+    return session.user
 }
 
-export {requireUser}
+export {auth, requireUser}

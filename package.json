@@ -31,6 +31,7 @@
         "url": "https://github.com/bradgarropy/super-bowl-squares"
     },
     "scripts": {
+        "auth:generate": "npx auth@latest generate --config ./src/utils/auth.server.ts --output ./src/db/auth.ts",
         "build": "react-router build",
         "contributors": "all-contributors generate",
         "db:check": "drizzle-kit check",
@@ -38,7 +39,7 @@
         "db:migrate:dev": "wrangler d1 migrations apply DB --local",
         "db:migrate:prod": "wrangler d1 migrations apply DB --remote",
         "db:migrate:staging": "wrangler d1 migrations apply DB --remote --env staging",
-        "db:seed": "tsx src/db/seed.ts",
+        "db:seed": "tsx --env-file=.env src/db/seed.ts",
         "format": "prettier --check .",
         "format:fix": "prettier --write .",
         "lint": "eslint .",
@@ -51,8 +52,9 @@
         "typegen": "react-router typegen && wrangler types"
     },
     "dependencies": {
+        "@better-auth/drizzle-adapter": "^1.7.2",
         "array-shuffle": "^3.0.0",
-        "bcryptjs": "^3.0.3",
+        "better-auth": "^1.7.2",
         "clsx": "^2.1.1",
         "drizzle-orm": "^0.45.2",
         "isbot": "^5.1.1",

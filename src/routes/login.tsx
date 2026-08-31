@@ -1,61 +1,39 @@
-import bcrypt from "bcryptjs"
-import {eq} from "drizzle-orm"
-import {Form, Link, redirect} from "react-router"
+import {isAPIError} from "better-auth/api"
+import {data, Form, Link, redirect, useActionData} from "react-router"
 
-import {dbCtx} from "~/db/client.server"
-import {users} from "~/db/schema"
-import {commitSession, getSession} from "~/utils/session.server"
+import {auth} from "~/utils/auth.server"
 
 import type {Route} from "./+types/login"
 
-export const action = async ({request, context}: Route.ActionArgs) => {
-    console.log("login")
-
-    const db = context.get(dbCtx)
+export const action = async ({request}: Route.ActionArgs) => {
     const formData = await request.formData()
 
-    const email = formData.get("email") as string
-    const password = formData.get("password") as string
+    const email = String(formData.get("email") ?? "")
+    const password = String(formData.get("password") ?? "")
 
-    // look up user by email
-    const user = await db.query.users.findFirst({
-        columns: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-            password: true,
-        },
-        where: eq(users.email, email),
-    })
+    try {
+        const {headers} = await auth.api.signInEmail({
+            body: {email, password},
+            headers: request.headers,
+            returnHeaders: true,
+        })
 
-    if (!user) {
-        console.log("user does not exist")
-        throw redirect("/login")
+        return redirect("/games", {headers})
+    } catch (error) {
+        if (isAPIError(error)) {
+            return data(
+                {error: error.body?.message ?? "Unable to log in."},
+                {status: error.statusCode},
+            )
+        }
+
+        throw error
     }
-
-    // check to see if password matches
-    const matches = await bcrypt.compare(password, user.password)
-
-    if (!matches) {
-        console.log("incorrect password")
-        throw redirect("/login")
-    }
-
-    const session = await getSession(request.headers.get("Cookie"))
-
-    session.set("user", {
-        id: user.id,
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-    })
-
-    const setCookieHeader = await commitSession(session)
-    return redirect("/games", {headers: {"Set-Cookie": setCookieHeader}})
 }
 
 const Login = () => {
+    const actionData = useActionData<typeof action>()
+
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">login</h1>
@@ -65,7 +43,7 @@ const Login = () => {
                     <label htmlFor="email">email</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="email"
                         name="email"
                         id="email"
@@ -77,7 +55,7 @@ const Login = () => {
                     <label htmlFor="password">password</label>
 
                     <input
-                        className="text-black"
+                        className="bg-white text-black"
                         type="password"
                         name="password"
                         id="password"
@@ -88,6 +66,10 @@ const Login = () => {
                 <button type="submit" className="mt-4 justify-self-end">
                     login
                 </button>
+
+                {actionData?.error ? (
+                    <p role="alert">{actionData.error}</p>
+                ) : null}
             </Form>
 
             <p className="mt-10 text-center">

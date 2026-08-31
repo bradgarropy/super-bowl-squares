@@ -1,18 +1,19 @@
-import bcrypt from "bcryptjs"
-import {sql} from "drizzle-orm"
+import {drizzleAdapter} from "@better-auth/drizzle-adapter"
+import {betterAuth} from "better-auth/minimal"
 import {getPlatformProxy} from "wrangler"
 
+import {account, rateLimit, session, user, verification} from "~/db/auth"
 import {createDb} from "~/db/client.server"
-import {users} from "~/db/schema"
+import * as schema from "~/db/schema"
 
 const password = "password"
 const testEmail = "test@example.com"
-const userSeeds = [
-    {firstName: "Test", lastName: "User", email: testEmail},
-    {firstName: "Patrick", lastName: "Mahomes", email: "patrick@example.com"},
-    {firstName: "Jalen", lastName: "Hurts", email: "jalen@example.com"},
-    {firstName: "Josh", lastName: "Allen", email: "josh@example.com"},
-    {firstName: "Lamar", lastName: "Jackson", email: "lamar@example.com"},
+const users = [
+    {name: "Test User", email: testEmail},
+    {name: "Patrick Mahomes", email: "patrick@example.com"},
+    {name: "Jalen Hurts", email: "jalen@example.com"},
+    {name: "Josh Allen", email: "josh@example.com"},
+    {name: "Lamar Jackson", email: "lamar@example.com"},
 ]
 
 const main = async () => {
@@ -20,28 +21,50 @@ const main = async () => {
         throw new Error("Seeding is disabled in production")
     }
 
-    const hashedPassword = await bcrypt.hash(password, 10)
-
     const platform = await getPlatformProxy<Pick<Env, "DB">>({
         remoteBindings: false,
     })
 
     try {
         const db = createDb(platform.env.DB)
+        const auth = betterAuth({
+            baseURL: {
+                allowedHosts: [
+                    "localhost:*",
+                    "*.bradgarropy.com",
+                    "*.bradgarropy.workers.dev",
+                ],
+                fallback: "http://localhost:5173",
+            },
+            database: drizzleAdapter(db, {
+                provider: "sqlite",
+                schema,
+            }),
+            emailAndPassword: {
+                enabled: true,
+            },
+            rateLimit: {
+                storage: "database",
+            },
+        })
 
         await db.batch([
-            db.delete(users),
-            // Reset SQLite's auto-increment counter so seeded IDs start at 1.
-            db.run(sql`delete from sqlite_sequence where name = 'User'`),
-            db.insert(users).values(
-                userSeeds.map(user => ({
-                    ...user,
-                    password: hashedPassword,
-                })),
-            ),
+            db.delete(session),
+            db.delete(account),
+            db.delete(verification),
+            db.delete(rateLimit),
+            db.delete(user),
         ])
 
-        console.log(`Seeded ${userSeeds.length} users in local D1`)
+        for (const {name, email} of users) {
+            await auth.api.signUpEmail({
+                body: {name, email, password},
+            })
+        }
+
+        await db.batch([db.delete(session), db.delete(rateLimit)])
+
+        console.log(`Seeded ${users.length} users in local D1`)
         console.log(`Login with ${testEmail} / ${password}`)
     } finally {
         await platform.dispose()
