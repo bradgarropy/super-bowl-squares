@@ -5,6 +5,7 @@ const routes: RouteConfig = [
     index("routes/_index.tsx"),
     route("account", "routes/account.tsx"),
     route("api/auth/*", "routes/api.auth.$.ts"),
+    route("boards", "routes/boards.tsx"),
     route("boards/:id", "routes/boards.$id.tsx"),
     route("games", "routes/games.tsx"),
     route("login", "routes/login.tsx"),
