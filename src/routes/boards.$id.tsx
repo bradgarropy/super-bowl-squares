@@ -32,11 +32,8 @@ const BoardRoute = ({loaderData}: Route.ComponentProps) => {
 
     return (
         <main className="space-y-6">
-            <Link
-                to={`/games/${game.id}`}
-                className="underline underline-offset-4"
-            >
-                Back to game
+            <Link to="/games" className="underline underline-offset-4">
+                Back to games
             </Link>
 
             <Board key={game.id} game={game} />

@@ -1,7 +1,15 @@
-import {Link} from "react-router"
+import {data, Form, redirect, useActionData} from "react-router"
 
 import DateTime from "~/components/DateTime"
-import {getLiveGames, getRecentGames, getUpcomingGames} from "~/utils/games"
+import {dbCtx} from "~/db/client.server"
+import {board} from "~/db/schema"
+import {requireUser} from "~/utils/auth.server"
+import {
+    getGame,
+    getLiveGames,
+    getRecentGames,
+    getUpcomingGames,
+} from "~/utils/games"
 
 import type {Route} from "./+types/games"
 
@@ -15,12 +23,42 @@ export const loader = async () => {
     return {recentGames, liveGames, upcomingGames}
 }
 
+export const action = async ({context, request}: Route.ActionArgs) => {
+    const user = await requireUser(request)
+    const formData = await request.formData()
+    const gameId = String(formData.get("gameId") ?? "")
+
+    if (!gameId) {
+        return data({error: "Game is required."}, {status: 400})
+    }
+
+    const game = await getGame(gameId)
+
+    if (game.state !== "pre") {
+        return data(
+            {error: "Boards cannot be created after a game has started."},
+            {status: 409},
+        )
+    }
+
+    const db = context.get(dbCtx)
+
+    const createdBoard = await db
+        .insert(board)
+        .values({gameId: game.id, ownerId: user.id})
+        .returning({id: board.id})
+        .get()
+
+    return redirect(`/boards/${createdBoard.id}`)
+}
+
 export const meta: Route.MetaFunction = () => {
     return [{title: "🏈 super bowl squares | games"}]
 }
 
 const Games = ({loaderData}: Route.ComponentProps) => {
     const {recentGames, liveGames, upcomingGames} = loaderData
+    const actionData = useActionData<typeof action>()
 
     return (
         <main className="space-y-6">
@@ -39,13 +77,9 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                             {recentGames.map(game => (
                                 <li key={game.id}>
                                     <h3 className="font-semibold">
-                                        <Link
-                                            to={`/games/${game.id}`}
-                                            className="underline underline-offset-4"
-                                        >
-                                            {game.name}
-                                        </Link>
+                                        {game.name}
                                     </h3>
+
                                     <DateTime date={game.date} />
                                 </li>
                             ))}
@@ -65,13 +99,9 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                             {liveGames.map(game => (
                                 <li key={game.id}>
                                     <h3 className="font-semibold">
-                                        <Link
-                                            to={`/games/${game.id}`}
-                                            className="underline underline-offset-4"
-                                        >
-                                            {game.name}
-                                        </Link>
+                                        {game.name}
                                     </h3>
+
                                     <DateTime date={game.date} />
                                 </li>
                             ))}
@@ -84,21 +114,33 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                         Upcoming games
                     </h2>
 
+                    {actionData?.error ? (
+                        <p role="alert">{actionData.error}</p>
+                    ) : null}
+
                     {upcomingGames.length === 0 ? (
                         <p>No upcoming NFL games found.</p>
                     ) : (
                         <ul className="space-y-4">
                             {upcomingGames.map(game => (
-                                <li key={game.id}>
+                                <li key={game.id} className="space-y-2">
                                     <h3 className="font-semibold">
-                                        <Link
-                                            to={`/games/${game.id}`}
-                                            className="underline underline-offset-4"
-                                        >
-                                            {game.name}
-                                        </Link>
+                                        {game.name}
                                     </h3>
+
                                     <DateTime date={game.date} />
+
+                                    <Form method="post">
+                                        <input
+                                            type="hidden"
+                                            name="gameId"
+                                            value={game.id}
+                                        />
+
+                                        <button type="submit">
+                                            Create board
+                                        </button>
+                                    </Form>
                                 </li>
                             ))}
                         </ul>
