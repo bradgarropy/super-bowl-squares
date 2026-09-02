@@ -149,9 +149,38 @@ test("only returns pre-game events in the next seven days, ordered by kickoff", 
     ])
 })
 
-test("returns an empty list when no games are scheduled", async () => {
-    fetchMock.mockResolvedValue(Response.json({events: []}))
+test("returns an empty list when no games are scheduled in the next year", async () => {
+    fetchMock.mockImplementation(async () => Response.json({events: []}))
     expect(await getUpcomingGames()).toEqual([])
+})
+
+test("falls back to the next five scheduled games", async () => {
+    fetchMock.mockResolvedValueOnce(Response.json({events: []}))
+    fetchMock.mockResolvedValueOnce(
+        Response.json({
+            events: [
+                createEvent("sixth", "2026-11-07T00:00Z"),
+                createEvent("third", "2026-11-04T00:00Z"),
+                createEvent("past", "2026-08-27T11:59Z"),
+                createEvent("first", "2026-11-02T00:00Z"),
+                createEvent("final", "2026-11-01T00:00Z", "STATUS_FINAL"),
+                createEvent("fifth", "2026-11-06T00:00Z"),
+                createEvent("second", "2026-11-03T00:00Z"),
+                createEvent("fourth", "2026-11-05T00:00Z"),
+            ],
+        }),
+    )
+
+    expect((await getUpcomingGames()).map(game => game.id)).toEqual([
+        "first",
+        "second",
+        "third",
+        "fourth",
+        "fifth",
+    ])
+
+    const fallbackUrl = new URL(String(fetchMock.mock.calls[1][0]))
+    expect(fallbackUrl.searchParams.get("dates")).toBe("20260827-20270827")
 })
 
 test("includes the previous ESPN calendar date for late-night kickoffs", async () => {

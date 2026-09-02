@@ -85,7 +85,7 @@ const Games = ({loaderData}: Route.ComponentProps) => {
                     </h2>
 
                     {upcomingGames.length === 0 ? (
-                        <p>No upcoming NFL games in the next seven days.</p>
+                        <p>No upcoming NFL games found.</p>
                     ) : (
                         <ul className="space-y-4">
                             {upcomingGames.map(game => (
