@@ -52,7 +52,9 @@ test("renders the teams, scores, and live status", () => {
 test("renders scheduled and final statuses", () => {
     const {rerender} = render(<Scoreboard game={{...game, state: "pre"}} />)
 
-    expect(screen.getByText("Scheduled")).toBeTruthy()
+    expect(screen.getByText("vs")).toBeTruthy()
+    expect(screen.queryByText("17")).not.toBeInTheDocument()
+    expect(screen.queryByText("24")).not.toBeInTheDocument()
 
     rerender(<Scoreboard game={{...game, state: "post"}} />)
 

@@ -32,11 +32,23 @@ test("shows a login link when logged out", () => {
     renderHeader(null)
 
     expect(screen.getByText("Super Bowl Squares")).toBeTruthy()
+    expect(screen.getByRole("link", {name: "games"})).toHaveAttribute(
+        "href",
+        "/games",
+    )
     expect(screen.getByRole("link", {name: "login"})).toBeTruthy()
 })
 
 test("shows a logout button when logged in", () => {
     renderHeader({id: 1})
 
+    expect(screen.getByRole("link", {name: "games"})).toHaveAttribute(
+        "href",
+        "/games",
+    )
+    expect(screen.getByRole("link", {name: "boards"})).toHaveAttribute(
+        "href",
+        "/boards",
+    )
     expect(screen.getByRole("button", {name: "logout"})).toBeTruthy()
 })

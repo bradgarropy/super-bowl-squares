@@ -18,7 +18,7 @@ export const action = async ({request}: Route.ActionArgs) => {
             returnHeaders: true,
         })
 
-        return redirect("/games", {headers})
+        return redirect("/boards", {headers})
     } catch (error) {
         if (isAPIError(error)) {
             return data(
