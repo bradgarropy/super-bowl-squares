@@ -55,7 +55,7 @@ type EspnSummary = {
             }
             competitors: {
                 homeAway: "home" | "away"
-                score: string
+                score?: string
                 linescores?: EspnLineScore[]
                 team: EspnSummaryTeam
             }[]

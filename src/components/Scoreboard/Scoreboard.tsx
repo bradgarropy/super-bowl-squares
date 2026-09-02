@@ -9,7 +9,7 @@ const Scoreboard = ({game}: ScoreboardProps) => {
     let status = "Final"
 
     if (game.state === "pre") {
-        status = "Scheduled"
+        status = "vs"
     }
 
     if (game.state === "in") {
@@ -30,16 +30,21 @@ const Scoreboard = ({game}: ScoreboardProps) => {
                         alt=""
                         className="size-12 object-contain"
                     />
+
                     <span className="font-bold">
                         {game.teams.away.abbreviation}
                     </span>
-                    <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
-                        {game.score.away}
-                    </span>
+
+                    {game.state === "pre" ? null : (
+                        <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
+                            {game.score.away}
+                        </span>
+                    )}
                 </div>
 
                 <div className="flex min-w-24 flex-col items-center text-sm text-gray-300">
                     <span className="font-semibold text-white">{status}</span>
+
                     {game.state === "in" ? (
                         <span>
                             Q{game.quarter} · {game.clock}
@@ -48,12 +53,16 @@ const Scoreboard = ({game}: ScoreboardProps) => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
-                        {game.score.home}
-                    </span>
+                    {game.state === "pre" ? null : (
+                        <span className="w-[2ch] flex-none text-center text-4xl font-bold tabular-nums">
+                            {game.score.home}
+                        </span>
+                    )}
+
                     <span className="font-bold">
                         {game.teams.home.abbreviation}
                     </span>
+
                     <img
                         src={game.teams.home.logo}
                         alt=""

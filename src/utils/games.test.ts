@@ -469,6 +469,36 @@ test("reports an HTTP error when game details cannot be loaded", async () => {
     )
 })
 
+test("defaults missing scheduled scores to zero", async () => {
+    fetchMock.mockResolvedValue(
+        Response.json({
+            header: {
+                id: "scheduled",
+                competitions: [
+                    {
+                        date: "2026-09-09T00:20Z",
+                        status: {
+                            displayClock: "0:00",
+                            period: 0,
+                            type: {
+                                name: "STATUS_SCHEDULED",
+                                state: "pre",
+                                completed: false,
+                            },
+                        },
+                        competitors: [
+                            {homeAway: "home", team: homeTeamSummary},
+                            {homeAway: "away", team: awayTeamSummary},
+                        ],
+                    },
+                ],
+            },
+        }),
+    )
+
+    expect((await getGame("scheduled")).score).toEqual({home: 0, away: 0})
+})
+
 test("reports game details with no competition", async () => {
     fetchMock.mockResolvedValue(
         Response.json({header: {id: "missing", competitions: []}}),

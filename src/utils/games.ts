@@ -120,8 +120,8 @@ const getGame = async (id: string): Promise<GameDetails> => {
         quarter: competition.status.period,
         clock: competition.status.displayClock,
         score: {
-            home: Number(home.score),
-            away: Number(away.score),
+            home: Number(home.score ?? 0),
+            away: Number(away.score ?? 0),
         },
         quarterScores: getScores(
             home.linescores ?? [],
