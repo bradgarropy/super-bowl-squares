@@ -155,7 +155,7 @@ const getLiveGames = async (): Promise<Game[]> => {
         .map(createGame)
 }
 
-/** Pre-game NFL events from now through the next seven days, earliest first. */
+/** The next seven days of games, or the next five games when that window is empty. */
 const getUpcomingGames = async (): Promise<Game[]> => {
     const now = new Date()
     const end = new Date(now)
@@ -163,7 +163,7 @@ const getUpcomingGames = async (): Promise<Game[]> => {
 
     const scoreboard = await getScoreboardForRange(now, end)
 
-    return scoreboard.events
+    const upcomingGames = scoreboard.events
         .filter(event => {
             const kickoff = new Date(event.date)
 
@@ -175,6 +175,27 @@ const getUpcomingGames = async (): Promise<Game[]> => {
         })
         .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
         .map(createGame)
+
+    if (upcomingGames.length > 0) {
+        return upcomingGames
+    }
+
+    const oneYearLater = new Date(now)
+    oneYearLater.setUTCFullYear(oneYearLater.getUTCFullYear() + 1)
+
+    const yearScoreboard = await getScoreboard(now, oneYearLater)
+
+    const upcomingYearGames = yearScoreboard.events
+        .filter(
+            event =>
+                event.status.type.state === "pre" &&
+                new Date(event.date) >= now,
+        )
+        .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+        .slice(0, 5)
+        .map(createGame)
+
+    return upcomingYearGames
 }
 
 /** Post-game NFL events with kickoffs in the past seven days, newest first. */
