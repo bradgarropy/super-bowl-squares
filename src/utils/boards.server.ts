@@ -11,4 +11,13 @@ const getUserBoard = (db: Database, boardId: string, userId: string) => {
     return board
 }
 
-export {getUserBoard}
+const getUserBoards = (db: Database, userId: string) => {
+    const boards = db.query.board.findMany({
+        where: (board, {eq}) => eq(board.ownerId, userId),
+        orderBy: (board, {desc}) => desc(board.createdAt),
+    })
+
+    return boards
+}
+
+export {getUserBoard, getUserBoards}
