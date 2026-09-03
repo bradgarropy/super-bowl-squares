@@ -27,20 +27,20 @@ const board = {
     ownerId: "owner-1",
     createdAt: "2026-09-02 12:00:00",
     updatedAt: "2026-09-02 12:00:00",
-    members: [
+    players: [
         {
-            id: "member-1",
+            id: "player-1",
             boardId: "board-1",
             userId: "owner-1",
-            email: "owner@example.com",
+            name: "Owner",
             createdAt: "2026-09-02 12:00:00",
             updatedAt: "2026-09-02 12:00:00",
         },
         {
-            id: "member-2",
+            id: "player-2",
             boardId: "board-1",
             userId: null,
-            email: "guest@example.com",
+            name: "Alex",
             createdAt: "2026-09-02 12:00:00",
             updatedAt: "2026-09-02 12:00:00",
         },
@@ -68,7 +68,7 @@ beforeEach(() => {
     vi.mocked(getUserBoard).mockResolvedValue(board)
 })
 
-test("loads members using the authenticated owner's board query", async () => {
+test("loads players using the authenticated owner's board query", async () => {
     const result = await loadBoard()
 
     expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
@@ -76,7 +76,7 @@ test("loads members using the authenticated owner's board query", async () => {
         board.id,
         board.ownerId,
     )
-    expect(result.board.members).toEqual(board.members)
+    expect(result.board.players).toEqual(board.players)
     expect(getGame).toHaveBeenCalledExactlyOnceWith(board.gameId)
 })
 
@@ -87,7 +87,7 @@ test("returns 404 when the board is missing or not owned by the user", async () 
     expect(getGame).not.toHaveBeenCalled()
 })
 
-test("requires authentication before loading members", async () => {
+test("requires authentication before loading players", async () => {
     const redirect = new Response(null, {status: 302})
     vi.mocked(requireUser).mockRejectedValueOnce(redirect)
 
@@ -95,9 +95,9 @@ test("requires authentication before loading members", async () => {
     expect(getUserBoard).not.toHaveBeenCalled()
 })
 
-const renderBoard = (members = board.members) => {
+const renderBoard = (players = board.players) => {
     const props = {
-        loaderData: {board: {...board, members}, game: {id: board.gameId}},
+        loaderData: {board: {...board, players}, game: {id: board.gameId}},
     } as Route.ComponentProps
 
     render(
@@ -107,18 +107,18 @@ const renderBoard = (members = board.members) => {
     )
 }
 
-test("shows emails for both account holders and guests", () => {
+test("shows names for both account holders and guests", () => {
     renderBoard()
 
-    const members = screen.getByRole("region", {name: "Members"})
-    expect(within(members).getAllByRole("listitem")).toHaveLength(2)
-    expect(within(members).getByText("owner@example.com")).toBeInTheDocument()
-    expect(within(members).getByText("guest@example.com")).toBeInTheDocument()
+    const players = screen.getByRole("region", {name: "Players"})
+    expect(within(players).getAllByRole("listitem")).toHaveLength(2)
+    expect(within(players).getByText("Owner")).toBeInTheDocument()
+    expect(within(players).getByText("Alex")).toBeInTheDocument()
 })
 
-test("shows an empty state for boards without members", () => {
+test("shows an empty state for boards without players", () => {
     renderBoard([])
 
-    expect(screen.getByText("No members yet.")).toBeInTheDocument()
+    expect(screen.getByText("No players yet.")).toBeInTheDocument()
     expect(screen.queryByRole("list")).not.toBeInTheDocument()
 })

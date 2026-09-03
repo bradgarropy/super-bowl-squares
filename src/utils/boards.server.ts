@@ -7,10 +7,10 @@ const getUserBoard = (db: Database, boardId: string, userId: string) => {
         where: (board, {and, eq}) =>
             and(eq(board.id, boardId), eq(board.ownerId, userId)),
         with: {
-            members: {
-                orderBy: (member, {asc}) => [
-                    asc(member.createdAt),
-                    asc(member.id),
+            players: {
+                orderBy: (player, {asc}) => [
+                    asc(player.createdAt),
+                    asc(player.id),
                 ],
             },
         },

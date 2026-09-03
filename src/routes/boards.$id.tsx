@@ -39,20 +39,20 @@ const BoardRoute = ({loaderData}: Route.ComponentProps) => {
             <Board key={game.id} game={game} />
 
             <section
-                aria-labelledby="members-heading"
+                aria-labelledby="players-heading"
                 className="mx-auto max-w-3xl space-y-4"
             >
-                <h2 id="members-heading" className="text-xl font-bold">
-                    Members
+                <h2 id="players-heading" className="text-xl font-bold">
+                    Players
                 </h2>
 
-                {board.members.length === 0 ? (
-                    <p>No members yet.</p>
+                {board.players.length === 0 ? (
+                    <p>No players yet.</p>
                 ) : (
                     <ul className="space-y-2">
-                        {board.members.map(member => (
-                            <li key={member.id} className="break-words">
-                                {member.email}
+                        {board.players.map(player => (
+                            <li key={player.id} className="break-words">
+                                {player.name}
                             </li>
                         ))}
                     </ul>
