@@ -2,7 +2,7 @@ import {data, Form, redirect, useActionData} from "react-router"
 
 import DateTime from "~/components/DateTime"
 import {dbCtx} from "~/db/client.server"
-import {board} from "~/db/schema"
+import {board, boardMember} from "~/db/schema"
 import {requireUser} from "~/utils/auth.server"
 import {
     getGame,
@@ -42,14 +42,20 @@ export const action = async ({context, request}: Route.ActionArgs) => {
     }
 
     const db = context.get(dbCtx)
+    const boardId = crypto.randomUUID()
 
-    const createdBoard = await db
-        .insert(board)
-        .values({gameId: game.id, ownerId: user.id})
-        .returning({id: board.id})
-        .get()
+    await db.batch([
+        db
+            .insert(board)
+            .values({id: boardId, gameId: game.id, ownerId: user.id}),
+        db.insert(boardMember).values({
+            boardId,
+            userId: user.id,
+            email: user.email,
+        }),
+    ])
 
-    return redirect(`/boards/${createdBoard.id}`)
+    return redirect(`/boards/${boardId}`)
 }
 
 export const meta: Route.MetaFunction = () => {
