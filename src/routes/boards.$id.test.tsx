@@ -161,12 +161,16 @@ test("enables the add-player form before kickoff", () => {
     renderBoard()
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
+    expect(screen.getByRole("button", {name: "Remove Alex"})).toBeEnabled()
+    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeEnabled()
 })
 
 test.each(["in", "post"] as const)("disables the form for %s games", state => {
     renderBoard(board.players, state)
     expect(screen.getByLabelText("Player name")).toBeDisabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeDisabled()
+    expect(screen.getByRole("button", {name: "Remove Alex"})).toBeDisabled()
+    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeDisabled()
     expect(
         screen.getByText("Players are locked because the game has started."),
     ).toBeInTheDocument()
@@ -256,4 +260,75 @@ test("rejects a missing name", async () => {
 test("does not redirect when the insert fails", async () => {
     run.mockRejectedValueOnce(new Error("Database unavailable"))
     await expect(addPlayer()).rejects.toThrow()
+})
+
+const removePlayer = (playerId = "player-2") =>
+    addPlayer(new URLSearchParams({intent: "remove", playerId}))
+
+test.each(["player-1", "player-2"])(
+    "removes %s only from the owned board",
+    async playerId => {
+        const response = await removePlayer(playerId)
+
+        expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
+            db,
+            board.id,
+            board.ownerId,
+        )
+        expect(prepare).toHaveBeenCalledExactlyOnceWith(
+            'delete from "player" where ("player"."id" = ? and "player"."board_id" = ?)',
+        )
+        expect(bind).toHaveBeenCalledExactlyOnceWith(playerId, board.id)
+        expect(run).toHaveBeenCalledTimes(1)
+        expect((response as Response).headers.get("Location")).toBe(
+            `/boards/${board.id}`,
+        )
+    },
+)
+
+test("rejects removal of a missing player or a player from another board", async () => {
+    expect(await removePlayer("other-board-player")).toMatchObject({
+        init: {status: 404},
+    })
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("rejects removal without a player ID", async () => {
+    expect(await removePlayer("")).toMatchObject({init: {status: 400}})
+    expect(run).not.toHaveBeenCalled()
+})
+
+test.each(["in", "post"] as const)(
+    "rejects player removal for %s games",
+    async state => {
+        vi.mocked(getGame).mockResolvedValueOnce({...game, state})
+        expect(await removePlayer()).toMatchObject({init: {status: 409}})
+        expect(run).not.toHaveBeenCalled()
+    },
+)
+
+test("requires authentication to remove players", async () => {
+    const redirect = new Response(null, {status: 302})
+    vi.mocked(requireUser).mockRejectedValueOnce(redirect)
+    await expect(removePlayer()).rejects.toBe(redirect)
+    expect(getUserBoard).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("rejects removal from an unowned board", async () => {
+    vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
+    await expect(removePlayer()).rejects.toMatchObject({init: {status: 404}})
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("does not redirect when deleting fails", async () => {
+    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    await expect(removePlayer()).rejects.toThrow()
+})
+
+test("rejects unknown actions without writing", async () => {
+    expect(
+        await addPlayer(new URLSearchParams({intent: "unknown"})),
+    ).toMatchObject({init: {status: 400}})
+    expect(run).not.toHaveBeenCalled()
 })
