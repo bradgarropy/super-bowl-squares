@@ -61,7 +61,7 @@ beforeEach(() => {
     batch.mockResolvedValue([])
 })
 
-test("creates the board and owner membership in one batch", async () => {
+test("creates the board and owner player in one batch", async () => {
     const response = await submit()
 
     expect(response).toBeInstanceOf(Response)
@@ -72,7 +72,7 @@ test("creates the board and owner membership in one batch", async () => {
     expect(batch).toHaveBeenCalledTimes(1)
     const queries = batch.mock.calls[0][0]
     expect(queries).toHaveLength(2)
-    const [boardQuery, memberQuery] = queries.map(query =>
+    const [boardQuery, playerQuery] = queries.map(query =>
         (
             query as unknown as {
                 toSQL: () => {sql: string; params: unknown[]}
@@ -81,18 +81,18 @@ test("creates the board and owner membership in one batch", async () => {
     )
     expect(boardQuery.sql).toContain('insert into "board"')
     expect(boardQuery.params).toEqual([boardId, game.id, user.id])
-    expect(memberQuery.sql).toContain('insert into "board_member"')
-    expect(memberQuery.params).toEqual([
+    expect(playerQuery.sql).toContain('insert into "player"')
+    expect(playerQuery.params).toEqual([
         expect.any(String),
         boardId,
         user.id,
-        user.email,
+        user.name,
     ])
 })
 
 test("does not redirect when the batch fails", async () => {
-    batch.mockRejectedValueOnce(new Error("Membership insert failed"))
-    await expect(submit()).rejects.toThrow("Membership insert failed")
+    batch.mockRejectedValueOnce(new Error("Player insert failed"))
+    await expect(submit()).rejects.toThrow("Player insert failed")
 })
 
 test("requires authentication before creating anything", async () => {

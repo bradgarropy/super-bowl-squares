@@ -27,8 +27,8 @@ const board = sqliteTable(
     ],
 )
 
-const boardMember = sqliteTable(
-    "board_member",
+const player = sqliteTable(
+    "player",
     {
         id: text("id")
             .primaryKey()
@@ -39,7 +39,7 @@ const boardMember = sqliteTable(
         userId: text("user_id").references(() => user.id, {
             onDelete: "set null",
         }),
-        email: text("email").notNull(),
+        name: text("name").notNull(),
         createdAt: text("created_at")
             .default(sql`(current_timestamp)`)
             .notNull(),
@@ -49,15 +49,11 @@ const boardMember = sqliteTable(
             .notNull(),
     },
     table => [
-        uniqueIndex("board_member_board_id_email_idx").on(
-            table.boardId,
-            table.email,
-        ),
-        uniqueIndex("board_member_board_id_user_id_idx").on(
+        uniqueIndex("player_board_id_user_id_idx").on(
             table.boardId,
             table.userId,
         ),
-        index("board_member_user_id_idx").on(table.userId),
+        index("player_user_id_idx").on(table.userId),
     ],
 )
 
@@ -66,19 +62,19 @@ const boardRelations = relations(board, ({one, many}) => ({
         fields: [board.ownerId],
         references: [user.id],
     }),
-    members: many(boardMember),
+    players: many(player),
 }))
 
-const boardMemberRelations = relations(boardMember, ({one}) => ({
+const playerRelations = relations(player, ({one}) => ({
     board: one(board, {
-        fields: [boardMember.boardId],
+        fields: [player.boardId],
         references: [board.id],
     }),
     user: one(user, {
-        fields: [boardMember.userId],
+        fields: [player.userId],
         references: [user.id],
     }),
 }))
 
 export * from "~/db/auth"
-export {board, boardMember, boardMemberRelations, boardRelations}
+export {board, boardRelations, player, playerRelations}

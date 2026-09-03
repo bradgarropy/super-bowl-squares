@@ -2,7 +2,7 @@ import {data, Form, redirect, useActionData} from "react-router"
 
 import DateTime from "~/components/DateTime"
 import {dbCtx} from "~/db/client.server"
-import {board, boardMember} from "~/db/schema"
+import {board, player} from "~/db/schema"
 import {requireUser} from "~/utils/auth.server"
 import {
     getGame,
@@ -48,10 +48,10 @@ export const action = async ({context, request}: Route.ActionArgs) => {
         db
             .insert(board)
             .values({id: boardId, gameId: game.id, ownerId: user.id}),
-        db.insert(boardMember).values({
+        db.insert(player).values({
             boardId,
             userId: user.id,
-            email: user.email,
+            name: user.name,
         }),
     ])
 
