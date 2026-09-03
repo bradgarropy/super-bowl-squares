@@ -1,11 +1,16 @@
 import {cleanup, render, screen, within} from "@testing-library/react"
-import {MemoryRouter, RouterContextProvider} from "react-router"
+import {
+    createMemoryRouter,
+    RouterContextProvider,
+    RouterProvider,
+} from "react-router"
 import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
 import {createDb, dbCtx} from "~/db/client.server"
-import BoardRoute, {loader} from "~/routes/boards.$id"
+import BoardRoute, {action, loader} from "~/routes/boards.$id"
 import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
+import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
 
 import type {Route} from "./+types/boards.$id"
@@ -17,7 +22,10 @@ vi.mock("~/components/Board", () => ({default: () => <div>Game board</div>}))
 
 afterEach(cleanup)
 
-const db = createDb({} as Env["DB"])
+const run = vi.fn()
+const bind = vi.fn().mockReturnValue({run})
+const prepare = vi.fn().mockReturnValue({bind})
+const db = createDb({prepare} as unknown as Env["DB"])
 const context = new RouterContextProvider()
 context.set(dbCtx, db)
 
@@ -47,6 +55,25 @@ const board = {
     ],
 }
 
+const team = {
+    id: "team-1",
+    name: "Team",
+    abbreviation: "TEAM",
+    color: "000000",
+    logo: "",
+}
+const game: GameDetails = {
+    id: board.gameId,
+    name: "Away at Home",
+    date: "2026-09-09T23:00:00Z",
+    state: "pre",
+    quarter: 0,
+    clock: "0:00",
+    score: {home: 0, away: 0},
+    quarterScores: [],
+    teams: {home: team, away: team},
+}
+
 const loadBoard = () =>
     loader({
         context,
@@ -66,6 +93,8 @@ beforeEach(() => {
         updatedAt: new Date(),
     })
     vi.mocked(getUserBoard).mockResolvedValue(board)
+    vi.mocked(getGame).mockResolvedValue(game)
+    run.mockResolvedValue({success: true})
 })
 
 test("loads players using the authenticated owner's board query", async () => {
@@ -95,16 +124,21 @@ test("requires authentication before loading players", async () => {
     expect(getUserBoard).not.toHaveBeenCalled()
 })
 
-const renderBoard = (players = board.players) => {
+const renderBoard = (
+    players = board.players,
+    state: GameDetails["state"] = "pre",
+    error?: string,
+) => {
     const props = {
-        loaderData: {board: {...board, players}, game: {id: board.gameId}},
+        loaderData: {board: {...board, players}, game: {...game, state}},
+        actionData: error ? {error} : undefined,
     } as Route.ComponentProps
 
-    render(
-        <MemoryRouter>
-            <BoardRoute {...props} />
-        </MemoryRouter>,
+    const router = createMemoryRouter(
+        [{path: "/boards/:id", element: <BoardRoute {...props} />}],
+        {initialEntries: [`/boards/${board.id}`]},
     )
+    render(<RouterProvider router={router} />)
 }
 
 test("shows names for both account holders and guests", () => {
@@ -121,4 +155,105 @@ test("shows an empty state for boards without players", () => {
 
     expect(screen.getByText("No players yet.")).toBeInTheDocument()
     expect(screen.queryByRole("list")).not.toBeInTheDocument()
+})
+
+test("enables the add-player form before kickoff", () => {
+    renderBoard()
+    expect(screen.getByLabelText("Player name")).toBeEnabled()
+    expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
+})
+
+test.each(["in", "post"] as const)("disables the form for %s games", state => {
+    renderBoard(board.players, state)
+    expect(screen.getByLabelText("Player name")).toBeDisabled()
+    expect(screen.getByRole("button", {name: "Add player"})).toBeDisabled()
+    expect(
+        screen.getByText("Players are locked because the game has started."),
+    ).toBeInTheDocument()
+})
+
+test("displays action errors", () => {
+    renderBoard(board.players, "pre", "Player name is required.")
+    expect(screen.getByRole("alert")).toHaveTextContent(
+        "Player name is required.",
+    )
+})
+
+const addPlayer = (body: BodyInit = new URLSearchParams({name: "  Alex  "})) =>
+    action({
+        context,
+        params: {id: board.id},
+        request: new Request(`https://example.com/boards/${board.id}`, {
+            method: "POST",
+            body,
+        }),
+        url: new URL(`https://example.com/boards/${board.id}`),
+        pattern: "/boards/:id",
+    })
+
+test("adds a trimmed guest name to the owned board and redirects", async () => {
+    const response = await addPlayer()
+    expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        board.ownerId,
+    )
+    expect(prepare).toHaveBeenCalledWith(
+        expect.stringContaining('insert into "player"'),
+    )
+    expect(bind).toHaveBeenCalledExactlyOnceWith(
+        expect.any(String),
+        board.id,
+        "Alex",
+    )
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(response).toBeInstanceOf(Response)
+    expect((response as Response).headers.get("Location")).toBe(
+        `/boards/${board.id}`,
+    )
+})
+
+test.each(["in", "post"] as const)(
+    "rejects adding a player when the game is %s",
+    async state => {
+        vi.mocked(getGame).mockResolvedValueOnce({...game, state})
+        expect(await addPlayer()).toMatchObject({init: {status: 409}})
+        expect(run).not.toHaveBeenCalled()
+    },
+)
+
+test("checks authentication on direct submissions", async () => {
+    const redirect = new Response(null, {status: 302})
+    vi.mocked(requireUser).mockRejectedValueOnce(redirect)
+    await expect(addPlayer()).rejects.toBe(redirect)
+    expect(getUserBoard).not.toHaveBeenCalled()
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("rejects submissions for missing or unowned boards", async () => {
+    vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
+    await expect(addPlayer()).rejects.toMatchObject({init: {status: 404}})
+    expect(run).not.toHaveBeenCalled()
+})
+
+test.each(["", "   ", "a".repeat(101)])(
+    "rejects invalid player name %j",
+    async name => {
+        expect(await addPlayer(new URLSearchParams({name}))).toMatchObject({
+            init: {status: 400},
+        })
+        expect(run).not.toHaveBeenCalled()
+    },
+)
+
+test("rejects a missing name", async () => {
+    expect(await addPlayer(new URLSearchParams())).toMatchObject({
+        init: {status: 400},
+    })
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("does not redirect when the insert fails", async () => {
+    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    await expect(addPlayer()).rejects.toThrow()
 })

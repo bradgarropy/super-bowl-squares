@@ -1,7 +1,8 @@
-import {data, Link} from "react-router"
+import {data, Form, Link, redirect, useNavigation} from "react-router"
 
 import Board from "~/components/Board"
 import {dbCtx} from "~/db/client.server"
+import {player} from "~/db/schema"
 import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
@@ -27,8 +28,49 @@ export const meta: Route.MetaFunction = ({params}) => {
     return [{title: `🏈 super bowl squares | board ${params.id}`}]
 }
 
-const BoardRoute = ({loaderData}: Route.ComponentProps) => {
+export const action = async ({context, params, request}: Route.ActionArgs) => {
+    const user = await requireUser(request)
+    const db = context.get(dbCtx)
+    const board = await getUserBoard(db, params.id, user.id)
+
+    if (!board) {
+        throw data("Board not found", {status: 404})
+    }
+
+    const game = await getGame(board.gameId)
+
+    if (game.state !== "pre") {
+        return data(
+            {error: "Players cannot be added after the game has started."},
+            {status: 409},
+        )
+    }
+
+    const formData = await request.formData()
+    const value = formData.get("name")
+    const name = typeof value === "string" ? value.trim() : ""
+
+    if (!name) {
+        return data({error: "Player name is required."}, {status: 400})
+    }
+
+    if (name.length > 100) {
+        return data(
+            {error: "Player name must be 100 characters or fewer."},
+            {status: 400},
+        )
+    }
+
+    await db.insert(player).values({boardId: board.id, name}).run()
+
+    return redirect(`/boards/${board.id}`)
+}
+
+const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const {board, game} = loaderData
+    const navigation = useNavigation()
+    const isLocked = game.state !== "pre"
+    const isSubmitting = navigation.state === "submitting"
 
     return (
         <main className="space-y-6">
@@ -46,12 +88,53 @@ const BoardRoute = ({loaderData}: Route.ComponentProps) => {
                     Players
                 </h2>
 
+                <Form
+                    key={board.players.length}
+                    method="post"
+                    className="space-y-2"
+                >
+                    <fieldset
+                        disabled={isLocked || isSubmitting}
+                        className="flex flex-wrap items-end gap-3 disabled:opacity-50"
+                    >
+                        <div className="grid gap-1">
+                            <label htmlFor="player-name">Player name</label>
+
+                            <input
+                                id="player-name"
+                                name="name"
+                                type="text"
+                                required
+                                maxLength={100}
+                                className="rounded bg-white px-3 py-2 text-black"
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            className="rounded bg-white/20 px-4 py-2 disabled:cursor-not-allowed"
+                        >
+                            {isSubmitting ? "Adding…" : "Add player"}
+                        </button>
+                    </fieldset>
+
+                    {isLocked ? (
+                        <p className="text-sm text-gray-300">
+                            Players are locked because the game has started.
+                        </p>
+                    ) : null}
+
+                    {actionData?.error ? (
+                        <p role="alert">{actionData.error}</p>
+                    ) : null}
+                </Form>
+
                 {board.players.length === 0 ? (
                     <p>No players yet.</p>
                 ) : (
                     <ul className="space-y-2">
                         {board.players.map(player => (
-                            <li key={player.id} className="break-words">
+                            <li key={player.id} className="wrap-break-words">
                                 {player.name}
                             </li>
                         ))}
