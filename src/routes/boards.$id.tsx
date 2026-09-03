@@ -1,12 +1,11 @@
-import {and, eq} from "drizzle-orm"
 import {data, Form, Link, redirect, useNavigation} from "react-router"
 
 import Board from "~/components/Board"
 import {dbCtx} from "~/db/client.server"
-import {player} from "~/db/schema"
 import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
+import {addPlayer, removePlayer} from "~/utils/players.server"
 
 import type {Route} from "./+types/boards.$id"
 
@@ -48,7 +47,27 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
     }
 
     const formData = await request.formData()
-    const intent = formData.get("intent") ?? "add"
+    const intent = formData.get("intent")
+
+    if (intent === "add") {
+        const value = formData.get("name")
+        const name = typeof value === "string" ? value.trim() : ""
+
+        if (!name) {
+            return data({error: "Player name is required."}, {status: 400})
+        }
+
+        if (name.length > 100) {
+            return data(
+                {error: "Player name must be 100 characters or fewer."},
+                {status: 400},
+            )
+        }
+
+        await addPlayer(db, board.id, name)
+
+        return redirect(`/boards/${board.id}`)
+    }
 
     if (intent === "remove") {
         const playerId = formData.get("playerId")
@@ -61,35 +80,12 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             return data({error: "Player not found."}, {status: 404})
         }
 
-        await db
-            .delete(player)
-            .where(and(eq(player.id, playerId), eq(player.boardId, board.id)))
-            .run()
+        await removePlayer(db, board.id, playerId)
 
         return redirect(`/boards/${board.id}`)
     }
 
-    if (intent !== "add") {
-        return data({error: "Invalid action."}, {status: 400})
-    }
-
-    const value = formData.get("name")
-    const name = typeof value === "string" ? value.trim() : ""
-
-    if (!name) {
-        return data({error: "Player name is required."}, {status: 400})
-    }
-
-    if (name.length > 100) {
-        return data(
-            {error: "Player name must be 100 characters or fewer."},
-            {status: 400},
-        )
-    }
-
-    await db.insert(player).values({boardId: board.id, name}).run()
-
-    return redirect(`/boards/${board.id}`)
+    return data({error: "Invalid action."}, {status: 400})
 }
 
 const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {

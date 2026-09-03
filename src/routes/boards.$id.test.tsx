@@ -183,7 +183,9 @@ test("displays action errors", () => {
     )
 })
 
-const addPlayer = (body: BodyInit = new URLSearchParams({name: "  Alex  "})) =>
+const addPlayer = (
+    body: BodyInit = new URLSearchParams({intent: "add", name: "  Alex  "}),
+) =>
     action({
         context,
         params: {id: board.id},
@@ -243,7 +245,9 @@ test("rejects submissions for missing or unowned boards", async () => {
 test.each(["", "   ", "a".repeat(101)])(
     "rejects invalid player name %j",
     async name => {
-        expect(await addPlayer(new URLSearchParams({name}))).toMatchObject({
+        expect(
+            await addPlayer(new URLSearchParams({intent: "add", name})),
+        ).toMatchObject({
             init: {status: 400},
         })
         expect(run).not.toHaveBeenCalled()
@@ -251,9 +255,11 @@ test.each(["", "   ", "a".repeat(101)])(
 )
 
 test("rejects a missing name", async () => {
-    expect(await addPlayer(new URLSearchParams())).toMatchObject({
-        init: {status: 400},
-    })
+    expect(await addPlayer(new URLSearchParams({intent: "add"}))).toMatchObject(
+        {
+            init: {status: 400},
+        },
+    )
     expect(run).not.toHaveBeenCalled()
 })
 
@@ -330,5 +336,13 @@ test("rejects unknown actions without writing", async () => {
     expect(
         await addPlayer(new URLSearchParams({intent: "unknown"})),
     ).toMatchObject({init: {status: 400}})
+    expect(run).not.toHaveBeenCalled()
+})
+
+test("rejects a missing intent without writing", async () => {
+    expect(await addPlayer(new URLSearchParams({name: "Alex"}))).toMatchObject({
+        data: {error: "Invalid action."},
+        init: {status: 400},
+    })
     expect(run).not.toHaveBeenCalled()
 })
