@@ -28,7 +28,7 @@ export const meta: Route.MetaFunction = ({params}) => {
 }
 
 const BoardRoute = ({loaderData}: Route.ComponentProps) => {
-    const {game} = loaderData
+    const {board, game} = loaderData
 
     return (
         <main className="space-y-6">
@@ -37,6 +37,27 @@ const BoardRoute = ({loaderData}: Route.ComponentProps) => {
             </Link>
 
             <Board key={game.id} game={game} />
+
+            <section
+                aria-labelledby="members-heading"
+                className="mx-auto max-w-3xl space-y-4"
+            >
+                <h2 id="members-heading" className="text-xl font-bold">
+                    Members
+                </h2>
+
+                {board.members.length === 0 ? (
+                    <p>No members yet.</p>
+                ) : (
+                    <ul className="space-y-2">
+                        {board.members.map(member => (
+                            <li key={member.id} className="break-words">
+                                {member.email}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
         </main>
     )
 }
