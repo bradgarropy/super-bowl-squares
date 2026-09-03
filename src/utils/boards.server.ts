@@ -6,6 +6,14 @@ const getUserBoard = (db: Database, boardId: string, userId: string) => {
     const board = db.query.board.findFirst({
         where: (board, {and, eq}) =>
             and(eq(board.id, boardId), eq(board.ownerId, userId)),
+        with: {
+            members: {
+                orderBy: (member, {asc}) => [
+                    asc(member.createdAt),
+                    asc(member.id),
+                ],
+            },
+        },
     })
 
     return board
