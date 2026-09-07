@@ -1,51 +1,46 @@
-import arrayShuffle from "array-shuffle"
+import type {square} from "~/db/schema"
 
-type Participants = Record<string, Participant>
+type Square = typeof square.$inferInsert
+type SquareAssignment = Omit<Square, "boardId">
 
-type Participant = {
-    name: string
-    initials: string
-    entries: number
+const shuffle = <Value>(values: Value[]): Value[] => {
+    const shuffled = [...values]
+
+    for (let index = shuffled.length - 1; index > 0; index--) {
+        const randomIndex = Math.floor(Math.random() * (index + 1))
+        const value = shuffled[index]
+
+        shuffled[index] = shuffled[randomIndex]
+        shuffled[randomIndex] = value
+    }
+
+    return shuffled
 }
 
-const getInitials = (name: string): string => {
-    const pieces = name.split(" ")
+const assignSquares = (playerIds: string[]): SquareAssignment[] => {
+    if (playerIds.length === 0) {
+        return []
+    }
 
-    const initials = pieces
-        .map(piece => {
-            return piece[0].toUpperCase()
-        })
-        .join("")
+    if (playerIds.length > 100) {
+        throw new Error("A board cannot have more than 100 players")
+    }
 
-    return initials
-}
+    const shuffledPlayerIds = shuffle(playerIds)
 
-const assignSquares = (names: string[]): string[] => {
-    const squaresPerName = Math.floor(100 / names.length)
-    const remainingSquares = 100 % names.length
-    const remainingNames = arrayShuffle(names).slice(0, remainingSquares)
+    const assignments = Array.from(
+        {length: 100},
+        (_, index) => shuffledPlayerIds[index % shuffledPlayerIds.length],
+    )
 
-    const participants = names.reduce<Participants>((participant, name) => {
-        participant[name] = {
-            name,
-            initials: getInitials(name),
-            entries: squaresPerName,
-        }
+    const squares = shuffle(assignments).map((playerId, index) => ({
+        playerId,
+        row: Math.floor(index / 10),
+        column: index % 10,
+    }))
 
-        if (remainingNames.includes(name)) {
-            participant[name].entries += 1
-        }
-
-        return participant
-    }, {})
-
-    const squares = names.flatMap(name => {
-        return new Array(participants[name].entries).fill(
-            participants[name].initials,
-        )
-    })
-
-    return arrayShuffle(squares)
+    return squares
 }
 
 export {assignSquares}
+export type {SquareAssignment}
