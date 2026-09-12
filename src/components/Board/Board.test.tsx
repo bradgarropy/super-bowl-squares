@@ -37,7 +37,7 @@ const game: GameDetails = {
 }
 
 test("selects the latest quarter and highlights its winning square", () => {
-    render(<Board game={game} />)
+    render(<Board game={game} squares={[]} />)
 
     expect(
         screen.getByRole("button", {name: "Q2"}).getAttribute("aria-pressed"),
@@ -50,7 +50,7 @@ test("selects the latest quarter and highlights its winning square", () => {
 })
 
 test("selects another quarter", () => {
-    render(<Board game={game} />)
+    render(<Board game={game} squares={[]} />)
 
     fireEvent.click(screen.getByRole("button", {name: "Q1"}))
 
@@ -72,6 +72,7 @@ test("shows a blank board before a quarter is completed", () => {
                 score: {away: 0, home: 0},
                 quarterScores: [],
             }}
+            squares={[]}
         />,
     )
 
@@ -88,9 +89,29 @@ test("shows live game status between the scores", () => {
                 quarter: 2,
                 clock: "2:53",
             }}
+            squares={[]}
         />,
     )
 
     expect(screen.getByText("Live")).toBeTruthy()
     expect(screen.getByText("Q2 · 2:53")).toBeTruthy()
+})
+
+test("shows assigned players on the grid", () => {
+    render(
+        <Board
+            game={game}
+            squares={[
+                {
+                    row: 1,
+                    column: 2,
+                    player: {name: "Alex"},
+                },
+            ]}
+        />,
+    )
+
+    expect(
+        screen.getByRole("cell", {name: "Row 1, column 2: Alex"}),
+    ).toHaveTextContent("Alex")
 })

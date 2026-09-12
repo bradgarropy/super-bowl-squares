@@ -4,6 +4,7 @@ import type {Game} from "~/utils/games"
 const digits = Array.from({length: 10}, (_, digit) => digit)
 
 type GridProps = {
+    squares: GridSquare[]
     teams: Game["teams"]
     winner: {
         row: number
@@ -11,7 +12,19 @@ type GridProps = {
     } | null
 }
 
-const Grid = ({teams, winner}: GridProps) => {
+type GridSquare = {
+    row: number
+    column: number
+    player: {
+        name: string
+    }
+}
+
+const Grid = ({squares, teams, winner}: GridProps) => {
+    const squaresByPosition = new Map(
+        squares.map(square => [square.row * 10 + square.column, square]),
+    )
+
     const isWinningSquare = (row: number, column: number) => {
         return row === winner?.row && column === winner.column
     }
@@ -88,22 +101,33 @@ const Grid = ({teams, winner}: GridProps) => {
                                                 row,
                                                 column,
                                             )
+                                            const square =
+                                                squaresByPosition.get(
+                                                    row * 10 + column,
+                                                )
+                                            const label = isWinner
+                                                ? `Winning square: row ${row}, column ${column}`
+                                                : `Row ${row}, column ${column}`
 
                                             return (
                                                 <td
                                                     key={column}
                                                     aria-label={
-                                                        isWinner
-                                                            ? `Winning square: row ${row}, column ${column}`
-                                                            : `Row ${row}, column ${column}`
+                                                        square
+                                                            ? `${label}: ${square.player.name}`
+                                                            : label
                                                     }
                                                     className={cn(
-                                                        "size-16 bg-black/10",
+                                                        "size-16 max-w-16 bg-black/10 p-1 text-center text-xs leading-tight",
                                                         isWinner
                                                             ? "relative z-10 scale-105 bg-yellow-400/30 ring-4 ring-inset ring-yellow-400"
                                                             : "",
                                                     )}
-                                                />
+                                                >
+                                                    <span className="line-clamp-2 wrap-break-word">
+                                                        {square?.player.name}
+                                                    </span>
+                                                </td>
                                             )
                                         })}
                                     </tr>
@@ -123,3 +147,4 @@ const Grid = ({teams, winner}: GridProps) => {
 }
 
 export default Grid
+export type {GridSquare}

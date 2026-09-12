@@ -109,7 +109,7 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                 Back to games
             </Link>
 
-            <Board key={game.id} game={game} />
+            <Board key={game.id} game={game} squares={board.squares} />
 
             <section
                 aria-labelledby="players-heading"

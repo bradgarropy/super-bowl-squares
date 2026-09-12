@@ -61,7 +61,7 @@ beforeEach(() => {
     batch.mockResolvedValue([])
 })
 
-test("creates the board and owner player in one batch", async () => {
+test("creates the board, owner player, and square assignments in one batch", async () => {
     const response = await submit()
 
     expect(response).toBeInstanceOf(Response)
@@ -71,23 +71,36 @@ test("creates the board and owner player in one batch", async () => {
 
     expect(batch).toHaveBeenCalledTimes(1)
     const queries = batch.mock.calls[0][0]
-    expect(queries).toHaveLength(2)
-    const [boardQuery, playerQuery] = queries.map(query =>
-        (
-            query as unknown as {
-                toSQL: () => {sql: string; params: unknown[]}
-            }
-        ).toSQL(),
-    )
+    expect(queries).toHaveLength(7)
+    const [boardQuery, playerQuery, deleteSquaresQuery, ...squareQueries] =
+        queries.map(query =>
+            (
+                query as unknown as {
+                    toSQL: () => {sql: string; params: unknown[]}
+                }
+            ).toSQL(),
+        )
+    const playerId = playerQuery.params[0]
+
     expect(boardQuery.sql).toContain('insert into "board"')
     expect(boardQuery.params).toEqual([boardId, game.id, user.id])
     expect(playerQuery.sql).toContain('insert into "player"')
-    expect(playerQuery.params).toEqual([
-        expect.any(String),
-        boardId,
-        user.id,
-        user.name,
-    ])
+    expect(playerQuery.params).toEqual([playerId, boardId, user.id, user.name])
+    expect(deleteSquaresQuery.sql).toContain('delete from "square"')
+    expect(deleteSquaresQuery.params).toEqual([boardId])
+    expect(squareQueries).toHaveLength(4)
+
+    for (const squareQuery of squareQueries) {
+        expect(squareQuery.sql).toContain('insert into "square"')
+        expect(squareQuery.params).toHaveLength(100)
+
+        for (let index = 0; index < squareQuery.params.length; index += 4) {
+            expect(squareQuery.params.slice(index, index + 2)).toEqual([
+                boardId,
+                playerId,
+            ])
+        }
+    }
 })
 
 test("does not redirect when the batch fails", async () => {

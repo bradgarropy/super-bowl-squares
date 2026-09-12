@@ -23,7 +23,7 @@ const teams = {
 }
 
 test("renders a blank 10 by 10 grid", () => {
-    render(<Grid teams={teams} winner={null} />)
+    render(<Grid squares={[]} teams={teams} winner={null} />)
 
     expect(
         screen.getByRole("table", {
@@ -37,11 +37,31 @@ test("renders a blank 10 by 10 grid", () => {
 })
 
 test("highlights the winning square", () => {
-    render(<Grid teams={teams} winner={{row: 7, column: 4}} />)
+    render(<Grid squares={[]} teams={teams} winner={{row: 7, column: 4}} />)
 
     expect(
         screen
             .getByLabelText("Winning square: row 7, column 4")
             .getAttribute("class"),
     ).toContain("ring-yellow-400")
+})
+
+test("shows the assigned player in a square", () => {
+    render(
+        <Grid
+            squares={[
+                {
+                    row: 2,
+                    column: 3,
+                    player: {name: "Alex"},
+                },
+            ]}
+            teams={teams}
+            winner={null}
+        />,
+    )
+
+    expect(
+        screen.getByRole("cell", {name: "Row 2, column 3: Alex"}),
+    ).toHaveTextContent("Alex")
 })

@@ -10,6 +10,7 @@ import {
     getRecentGames,
     getUpcomingGames,
 } from "~/utils/games"
+import {createShuffleQueries} from "~/utils/squares.server"
 
 import type {Route} from "./+types/games"
 
@@ -43,16 +44,19 @@ export const action = async ({context, request}: Route.ActionArgs) => {
 
     const db = context.get(dbCtx)
     const boardId = crypto.randomUUID()
+    const playerId = crypto.randomUUID()
 
     await db.batch([
         db
             .insert(board)
             .values({id: boardId, gameId: game.id, ownerId: user.id}),
         db.insert(player).values({
+            id: playerId,
             boardId,
             userId: user.id,
             name: user.name,
         }),
+        ...createShuffleQueries(db, boardId, [playerId]),
     ])
 
     return redirect(`/boards/${boardId}`)
