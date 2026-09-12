@@ -13,6 +13,13 @@ const getUserBoard = (db: Database, boardId: string, userId: string) => {
                     asc(player.id),
                 ],
             },
+            squares: {
+                orderBy: (square, {asc}) => [
+                    asc(square.row),
+                    asc(square.column),
+                ],
+                with: {player: true},
+            },
         },
     })
 

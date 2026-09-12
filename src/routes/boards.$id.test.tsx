@@ -58,6 +58,22 @@ const board = {
             updatedAt: "2026-09-02 12:00:00",
         },
     ],
+    squares: [
+        {
+            boardId: "board-1",
+            playerId: "player-1",
+            row: 0,
+            column: 0,
+            player: {
+                id: "player-1",
+                boardId: "board-1",
+                userId: "owner-1",
+                name: "Owner",
+                createdAt: "2026-09-02 12:00:00",
+                updatedAt: "2026-09-02 12:00:00",
+            },
+        },
+    ],
 }
 
 const team = {
@@ -109,7 +125,7 @@ beforeEach(() => {
     ])
 })
 
-test("loads players using the authenticated owner's board query", async () => {
+test("loads players and squares using the authenticated owner's board query", async () => {
     const result = await loadBoard()
 
     expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
@@ -118,6 +134,7 @@ test("loads players using the authenticated owner's board query", async () => {
         board.ownerId,
     )
     expect(result.board.players).toEqual(board.players)
+    expect(result.board.squares).toEqual(board.squares)
     expect(getGame).toHaveBeenCalledExactlyOnceWith(board.gameId)
 })
 
