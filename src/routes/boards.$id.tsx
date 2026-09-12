@@ -94,8 +94,19 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             return data({error: "Player is required."}, {status: 400})
         }
 
-        if (!board.players.some(player => player.id === playerId)) {
+        const selectedPlayer = board.players.find(
+            player => player.id === playerId,
+        )
+
+        if (!selectedPlayer) {
             return data({error: "Player not found."}, {status: 404})
+        }
+
+        if (selectedPlayer.userId === board.ownerId) {
+            return data(
+                {error: "The board owner cannot be removed."},
+                {status: 409},
+            )
         }
 
         await removePlayer(db, board, playerId)
@@ -199,32 +210,36 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 <span className="min-w-0 wrap-break-words">
                                     {player.name}
                                 </span>
-                                <Form method="post">
-                                    <input
-                                        type="hidden"
-                                        name="intent"
-                                        value="remove"
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="playerId"
-                                        value={player.id}
-                                    />
-                                    <button
-                                        type="submit"
-                                        aria-label={`Remove ${player.name}`}
-                                        disabled={isLocked || isSubmitting}
-                                        className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {isSubmitting &&
-                                        navigation.formData?.get("intent") ===
-                                            "remove" &&
-                                        navigation.formData?.get("playerId") ===
-                                            player.id
-                                            ? "Removing…"
-                                            : "Remove"}
-                                    </button>
-                                </Form>
+                                {player.userId !== board.ownerId ? (
+                                    <Form method="post">
+                                        <input
+                                            type="hidden"
+                                            name="intent"
+                                            value="remove"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="playerId"
+                                            value={player.id}
+                                        />
+                                        <button
+                                            type="submit"
+                                            aria-label={`Remove ${player.name}`}
+                                            disabled={isLocked || isSubmitting}
+                                            className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {isSubmitting &&
+                                            navigation.formData?.get(
+                                                "intent",
+                                            ) === "remove" &&
+                                            navigation.formData?.get(
+                                                "playerId",
+                                            ) === player.id
+                                                ? "Removing…"
+                                                : "Remove"}
+                                        </button>
+                                    </Form>
+                                ) : null}
                             </li>
                         ))}
                     </ul>

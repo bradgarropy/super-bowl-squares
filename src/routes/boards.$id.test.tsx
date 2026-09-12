@@ -195,7 +195,9 @@ test("enables the add-player form before kickoff", () => {
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeEnabled()
-    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeEnabled()
+    expect(
+        screen.queryByRole("button", {name: "Remove Owner"}),
+    ).not.toBeInTheDocument()
 })
 
 test.each(["in", "post"] as const)("disables the form for %s games", state => {
@@ -206,7 +208,9 @@ test.each(["in", "post"] as const)("disables the form for %s games", state => {
     expect(screen.getByLabelText("Player name")).toBeDisabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeDisabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeDisabled()
-    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeDisabled()
+    expect(
+        screen.queryByRole("button", {name: "Remove Owner"}),
+    ).not.toBeInTheDocument()
     expect(
         screen.getByText("Players are locked because the game has started."),
     ).toBeInTheDocument()
@@ -341,26 +345,31 @@ test.each(["in", "post"] as const)(
 const removePlayer = (playerId = "player-2") =>
     addPlayer(new URLSearchParams({intent: "remove", playerId}))
 
-test.each(["player-1", "player-2"])(
-    "removes %s only from the owned board",
-    async playerId => {
-        const response = await removePlayer(playerId)
+test("removes a guest from the owned board", async () => {
+    const response = await removePlayer("player-2")
 
-        expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
-            db,
-            board.id,
-            board.ownerId,
-        )
-        expect(removePlayerRecord).toHaveBeenCalledExactlyOnceWith(
-            db,
-            board,
-            playerId,
-        )
-        expect((response as Response).headers.get("Location")).toBe(
-            `/boards/${board.id}`,
-        )
-    },
-)
+    expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        board.ownerId,
+    )
+    expect(removePlayerRecord).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board,
+        "player-2",
+    )
+    expect((response as Response).headers.get("Location")).toBe(
+        `/boards/${board.id}`,
+    )
+})
+
+test("rejects removal of the board owner", async () => {
+    expect(await removePlayer("player-1")).toMatchObject({
+        data: {error: "The board owner cannot be removed."},
+        init: {status: 409},
+    })
+    expect(removePlayerRecord).not.toHaveBeenCalled()
+})
 
 test("rejects removal of a missing player or a player from another board", async () => {
     expect(await removePlayer("other-board-player")).toMatchObject({
