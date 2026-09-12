@@ -12,20 +12,25 @@ import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
+import {
+    addPlayer as addPlayerRecord,
+    removePlayer as removePlayerRecord,
+} from "~/utils/players.server"
 
 import type {Route} from "./+types/boards.$id"
 
 vi.mock("~/utils/auth.server", () => ({requireUser: vi.fn()}))
 vi.mock("~/utils/boards.server", () => ({getUserBoard: vi.fn()}))
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
+vi.mock("~/utils/players.server", () => ({
+    addPlayer: vi.fn(),
+    removePlayer: vi.fn(),
+}))
 vi.mock("~/components/Board", () => ({default: () => <div>Game board</div>}))
 
 afterEach(cleanup)
 
-const run = vi.fn()
-const bind = vi.fn().mockReturnValue({run})
-const prepare = vi.fn().mockReturnValue({bind})
-const db = createDb({prepare} as unknown as Env["DB"])
+const db = createDb({} as Env["DB"])
 const context = new RouterContextProvider()
 context.set(dbCtx, db)
 
@@ -94,7 +99,14 @@ beforeEach(() => {
     })
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
-    run.mockResolvedValue({success: true})
+    vi.mocked(addPlayerRecord).mockResolvedValue([
+        {} as D1Result,
+        {} as D1Result,
+    ])
+    vi.mocked(removePlayerRecord).mockResolvedValue([
+        {} as D1Result,
+        {} as D1Result,
+    ])
 })
 
 test("loads players using the authenticated owner's board query", async () => {
@@ -204,15 +216,7 @@ test("adds a trimmed guest name to the owned board and redirects", async () => {
         board.id,
         board.ownerId,
     )
-    expect(prepare).toHaveBeenCalledWith(
-        expect.stringContaining('insert into "player"'),
-    )
-    expect(bind).toHaveBeenCalledExactlyOnceWith(
-        expect.any(String),
-        board.id,
-        "Alex",
-    )
-    expect(run).toHaveBeenCalledTimes(1)
+    expect(addPlayerRecord).toHaveBeenCalledExactlyOnceWith(db, board, "Alex")
     expect(response).toBeInstanceOf(Response)
     expect((response as Response).headers.get("Location")).toBe(
         `/boards/${board.id}`,
@@ -224,7 +228,7 @@ test.each(["in", "post"] as const)(
     async state => {
         vi.mocked(getGame).mockResolvedValueOnce({...game, state})
         expect(await addPlayer()).toMatchObject({init: {status: 409}})
-        expect(run).not.toHaveBeenCalled()
+        expect(addPlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -233,13 +237,13 @@ test("checks authentication on direct submissions", async () => {
     vi.mocked(requireUser).mockRejectedValueOnce(redirect)
     await expect(addPlayer()).rejects.toBe(redirect)
     expect(getUserBoard).not.toHaveBeenCalled()
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects submissions for missing or unowned boards", async () => {
     vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
     await expect(addPlayer()).rejects.toMatchObject({init: {status: 404}})
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test.each(["", "   ", "a".repeat(101)])(
@@ -250,7 +254,7 @@ test.each(["", "   ", "a".repeat(101)])(
         ).toMatchObject({
             init: {status: 400},
         })
-        expect(run).not.toHaveBeenCalled()
+        expect(addPlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -260,11 +264,29 @@ test("rejects a missing name", async () => {
             init: {status: 400},
         },
     )
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+})
+
+test("rejects adding more than 100 players", async () => {
+    vi.mocked(getUserBoard).mockResolvedValueOnce({
+        ...board,
+        players: Array.from({length: 100}, (_, index) => ({
+            ...board.players[0],
+            id: `player-${index}`,
+        })),
+    })
+
+    expect(await addPlayer()).toMatchObject({
+        data: {error: "A board cannot have more than 100 players."},
+        init: {status: 409},
+    })
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test("does not redirect when the insert fails", async () => {
-    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    vi.mocked(addPlayerRecord).mockRejectedValueOnce(
+        new Error("Database unavailable"),
+    )
     await expect(addPlayer()).rejects.toThrow()
 })
 
@@ -281,11 +303,11 @@ test.each(["player-1", "player-2"])(
             board.id,
             board.ownerId,
         )
-        expect(prepare).toHaveBeenCalledExactlyOnceWith(
-            'delete from "player" where ("player"."id" = ? and "player"."board_id" = ?)',
+        expect(removePlayerRecord).toHaveBeenCalledExactlyOnceWith(
+            db,
+            board,
+            playerId,
         )
-        expect(bind).toHaveBeenCalledExactlyOnceWith(playerId, board.id)
-        expect(run).toHaveBeenCalledTimes(1)
         expect((response as Response).headers.get("Location")).toBe(
             `/boards/${board.id}`,
         )
@@ -296,12 +318,12 @@ test("rejects removal of a missing player or a player from another board", async
     expect(await removePlayer("other-board-player")).toMatchObject({
         init: {status: 404},
     })
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects removal without a player ID", async () => {
     expect(await removePlayer("")).toMatchObject({init: {status: 400}})
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test.each(["in", "post"] as const)(
@@ -309,7 +331,7 @@ test.each(["in", "post"] as const)(
     async state => {
         vi.mocked(getGame).mockResolvedValueOnce({...game, state})
         expect(await removePlayer()).toMatchObject({init: {status: 409}})
-        expect(run).not.toHaveBeenCalled()
+        expect(removePlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -318,17 +340,19 @@ test("requires authentication to remove players", async () => {
     vi.mocked(requireUser).mockRejectedValueOnce(redirect)
     await expect(removePlayer()).rejects.toBe(redirect)
     expect(getUserBoard).not.toHaveBeenCalled()
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects removal from an unowned board", async () => {
     vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
     await expect(removePlayer()).rejects.toMatchObject({init: {status: 404}})
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("does not redirect when deleting fails", async () => {
-    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    vi.mocked(removePlayerRecord).mockRejectedValueOnce(
+        new Error("Database unavailable"),
+    )
     await expect(removePlayer()).rejects.toThrow()
 })
 
@@ -336,7 +360,8 @@ test("rejects unknown actions without writing", async () => {
     expect(
         await addPlayer(new URLSearchParams({intent: "unknown"})),
     ).toMatchObject({init: {status: 400}})
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects a missing intent without writing", async () => {
@@ -344,5 +369,6 @@ test("rejects a missing intent without writing", async () => {
         data: {error: "Invalid action."},
         init: {status: 400},
     })
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })

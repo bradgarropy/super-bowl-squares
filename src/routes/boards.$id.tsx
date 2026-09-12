@@ -64,7 +64,14 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             )
         }
 
-        await addPlayer(db, board.id, name)
+        if (board.players.length >= 100) {
+            return data(
+                {error: "A board cannot have more than 100 players."},
+                {status: 409},
+            )
+        }
+
+        await addPlayer(db, board, name)
 
         return redirect(`/boards/${board.id}`)
     }
@@ -80,7 +87,7 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             return data({error: "Player not found."}, {status: 404})
         }
 
-        await removePlayer(db, board.id, playerId)
+        await removePlayer(db, board, playerId)
 
         return redirect(`/boards/${board.id}`)
     }
