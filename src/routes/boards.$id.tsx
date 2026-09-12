@@ -6,6 +6,7 @@ import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
 import {addPlayer, removePlayer} from "~/utils/players.server"
+import {shuffleBoard} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
@@ -41,13 +42,23 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 
     if (game.state !== "pre") {
         return data(
-            {error: "Players cannot be changed after the game has started."},
+            {error: "Boards cannot be changed after the game has started."},
             {status: 409},
         )
     }
 
     const formData = await request.formData()
     const intent = formData.get("intent")
+
+    if (intent === "shuffle") {
+        await shuffleBoard(
+            db,
+            board.id,
+            board.players.map(player => player.id),
+        )
+
+        return redirect(`/boards/${board.id}`)
+    }
 
     if (intent === "add") {
         const value = formData.get("name")
@@ -64,7 +75,14 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             )
         }
 
-        await addPlayer(db, board.id, name)
+        if (board.players.length >= 100) {
+            return data(
+                {error: "A board cannot have more than 100 players."},
+                {status: 409},
+            )
+        }
+
+        await addPlayer(db, board, name)
 
         return redirect(`/boards/${board.id}`)
     }
@@ -76,11 +94,22 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             return data({error: "Player is required."}, {status: 400})
         }
 
-        if (!board.players.some(player => player.id === playerId)) {
+        const selectedPlayer = board.players.find(
+            player => player.id === playerId,
+        )
+
+        if (!selectedPlayer) {
             return data({error: "Player not found."}, {status: 404})
         }
 
-        await removePlayer(db, board.id, playerId)
+        if (selectedPlayer.userId === board.ownerId) {
+            return data(
+                {error: "The board owner cannot be removed."},
+                {status: 409},
+            )
+        }
+
+        await removePlayer(db, board, playerId)
 
         return redirect(`/boards/${board.id}`)
     }
@@ -95,6 +124,8 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const isSubmitting = navigation.state === "submitting"
     const isAdding =
         isSubmitting && navigation.formData?.get("intent") === "add"
+    const isShuffling =
+        isSubmitting && navigation.formData?.get("intent") === "shuffle"
 
     return (
         <main className="space-y-6">
@@ -102,7 +133,20 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                 Back to games
             </Link>
 
-            <Board key={game.id} game={game} />
+            <Board key={game.id} game={game} squares={board.squares} />
+
+            {!isLocked ? (
+                <Form method="post" className="mx-auto max-w-3xl">
+                    <input type="hidden" name="intent" value="shuffle" />
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="rounded bg-white/20 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {isShuffling ? "Shuffling…" : "Shuffle squares"}
+                    </button>
+                </Form>
+            ) : null}
 
             <section
                 aria-labelledby="players-heading"
@@ -166,32 +210,36 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 <span className="min-w-0 wrap-break-words">
                                     {player.name}
                                 </span>
-                                <Form method="post">
-                                    <input
-                                        type="hidden"
-                                        name="intent"
-                                        value="remove"
-                                    />
-                                    <input
-                                        type="hidden"
-                                        name="playerId"
-                                        value={player.id}
-                                    />
-                                    <button
-                                        type="submit"
-                                        aria-label={`Remove ${player.name}`}
-                                        disabled={isLocked || isSubmitting}
-                                        className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                    >
-                                        {isSubmitting &&
-                                        navigation.formData?.get("intent") ===
-                                            "remove" &&
-                                        navigation.formData?.get("playerId") ===
-                                            player.id
-                                            ? "Removing…"
-                                            : "Remove"}
-                                    </button>
-                                </Form>
+                                {player.userId !== board.ownerId ? (
+                                    <Form method="post">
+                                        <input
+                                            type="hidden"
+                                            name="intent"
+                                            value="remove"
+                                        />
+                                        <input
+                                            type="hidden"
+                                            name="playerId"
+                                            value={player.id}
+                                        />
+                                        <button
+                                            type="submit"
+                                            aria-label={`Remove ${player.name}`}
+                                            disabled={isLocked || isSubmitting}
+                                            className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {isSubmitting &&
+                                            navigation.formData?.get(
+                                                "intent",
+                                            ) === "remove" &&
+                                            navigation.formData?.get(
+                                                "playerId",
+                                            ) === player.id
+                                                ? "Removing…"
+                                                : "Remove"}
+                                        </button>
+                                    </Form>
+                                ) : null}
                             </li>
                         ))}
                     </ul>

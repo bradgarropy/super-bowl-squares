@@ -1,5 +1,13 @@
 import {relations, sql} from "drizzle-orm"
-import {index, sqliteTable, text, uniqueIndex} from "drizzle-orm/sqlite-core"
+import {
+    check,
+    index,
+    integer,
+    primaryKey,
+    sqliteTable,
+    text,
+    uniqueIndex,
+} from "drizzle-orm/sqlite-core"
 
 import {user} from "~/db/auth"
 
@@ -57,15 +65,36 @@ const player = sqliteTable(
     ],
 )
 
+const square = sqliteTable(
+    "square",
+    {
+        boardId: text("board_id")
+            .notNull()
+            .references(() => board.id, {onDelete: "cascade"}),
+        playerId: text("player_id")
+            .notNull()
+            .references(() => player.id, {onDelete: "cascade"}),
+        row: integer("row").notNull(),
+        column: integer("column").notNull(),
+    },
+    table => [
+        primaryKey({columns: [table.boardId, table.row, table.column]}),
+        index("square_player_id_idx").on(table.playerId),
+        check("square_row_check", sql`${table.row} between 0 and 9`),
+        check("square_column_check", sql`${table.column} between 0 and 9`),
+    ],
+)
+
 const boardRelations = relations(board, ({one, many}) => ({
     owner: one(user, {
         fields: [board.ownerId],
         references: [user.id],
     }),
     players: many(player),
+    squares: many(square),
 }))
 
-const playerRelations = relations(player, ({one}) => ({
+const playerRelations = relations(player, ({one, many}) => ({
     board: one(board, {
         fields: [player.boardId],
         references: [board.id],
@@ -74,7 +103,19 @@ const playerRelations = relations(player, ({one}) => ({
         fields: [player.userId],
         references: [user.id],
     }),
+    squares: many(square),
+}))
+
+const squareRelations = relations(square, ({one}) => ({
+    board: one(board, {
+        fields: [square.boardId],
+        references: [board.id],
+    }),
+    player: one(player, {
+        fields: [square.playerId],
+        references: [player.id],
+    }),
 }))
 
 export * from "~/db/auth"
-export {board, boardRelations, player, playerRelations}
+export {board, boardRelations, player, playerRelations, square, squareRelations}

@@ -1,17 +1,18 @@
 import {useState} from "react"
 
-import Grid from "~/components/Grid"
+import Grid, {type GridSquare} from "~/components/Grid"
 import QuarterSelector from "~/components/QuarterSelector"
 import Scoreboard from "~/components/Scoreboard"
 import type {GameDetails} from "~/utils/games"
 
 type BoardProps = {
     game: GameDetails
+    squares: GridSquare[]
 }
 
 const getWinningDigit = (score: number) => Math.abs(score) % 10
 
-const Board = ({game}: BoardProps) => {
+const Board = ({game, squares}: BoardProps) => {
     const [selectedQuarter, setSelectedQuarter] = useState(
         () => game.quarterScores.at(-1)?.quarter ?? null,
     )
@@ -39,7 +40,7 @@ const Board = ({game}: BoardProps) => {
                 />
             </div>
 
-            <Grid teams={game.teams} winner={winner} />
+            <Grid squares={squares} teams={game.teams} winner={winner} />
         </section>
     )
 }

@@ -1,1 +1,1 @@
-export {default} from "./Grid"
+export {default, type GridSquare} from "./Grid"

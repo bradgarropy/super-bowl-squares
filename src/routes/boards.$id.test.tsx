@@ -12,20 +12,27 @@ import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
+import {
+    addPlayer as addPlayerRecord,
+    removePlayer as removePlayerRecord,
+} from "~/utils/players.server"
+import {shuffleBoard as shuffleBoardRecord} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
 vi.mock("~/utils/auth.server", () => ({requireUser: vi.fn()}))
 vi.mock("~/utils/boards.server", () => ({getUserBoard: vi.fn()}))
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
+vi.mock("~/utils/players.server", () => ({
+    addPlayer: vi.fn(),
+    removePlayer: vi.fn(),
+}))
+vi.mock("~/utils/squares.server", () => ({shuffleBoard: vi.fn()}))
 vi.mock("~/components/Board", () => ({default: () => <div>Game board</div>}))
 
 afterEach(cleanup)
 
-const run = vi.fn()
-const bind = vi.fn().mockReturnValue({run})
-const prepare = vi.fn().mockReturnValue({bind})
-const db = createDb({prepare} as unknown as Env["DB"])
+const db = createDb({} as Env["DB"])
 const context = new RouterContextProvider()
 context.set(dbCtx, db)
 
@@ -51,6 +58,22 @@ const board = {
             name: "Alex",
             createdAt: "2026-09-02 12:00:00",
             updatedAt: "2026-09-02 12:00:00",
+        },
+    ],
+    squares: [
+        {
+            boardId: "board-1",
+            playerId: "player-1",
+            row: 0,
+            column: 0,
+            player: {
+                id: "player-1",
+                boardId: "board-1",
+                userId: "owner-1",
+                name: "Owner",
+                createdAt: "2026-09-02 12:00:00",
+                updatedAt: "2026-09-02 12:00:00",
+            },
         },
     ],
 }
@@ -94,10 +117,18 @@ beforeEach(() => {
     })
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
-    run.mockResolvedValue({success: true})
+    vi.mocked(addPlayerRecord).mockResolvedValue([
+        {} as D1Result,
+        {} as D1Result,
+    ])
+    vi.mocked(removePlayerRecord).mockResolvedValue([
+        {} as D1Result,
+        {} as D1Result,
+    ])
+    vi.mocked(shuffleBoardRecord).mockResolvedValue([{} as D1Result])
 })
 
-test("loads players using the authenticated owner's board query", async () => {
+test("loads players and squares using the authenticated owner's board query", async () => {
     const result = await loadBoard()
 
     expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
@@ -106,6 +137,7 @@ test("loads players using the authenticated owner's board query", async () => {
         board.ownerId,
     )
     expect(result.board.players).toEqual(board.players)
+    expect(result.board.squares).toEqual(board.squares)
     expect(getGame).toHaveBeenCalledExactlyOnceWith(board.gameId)
 })
 
@@ -159,18 +191,26 @@ test("shows an empty state for boards without players", () => {
 
 test("enables the add-player form before kickoff", () => {
     renderBoard()
+    expect(screen.getByRole("button", {name: "Shuffle squares"})).toBeEnabled()
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeEnabled()
-    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeEnabled()
+    expect(
+        screen.queryByRole("button", {name: "Remove Owner"}),
+    ).not.toBeInTheDocument()
 })
 
 test.each(["in", "post"] as const)("disables the form for %s games", state => {
     renderBoard(board.players, state)
+    expect(
+        screen.queryByRole("button", {name: "Shuffle squares"}),
+    ).not.toBeInTheDocument()
     expect(screen.getByLabelText("Player name")).toBeDisabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeDisabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeDisabled()
-    expect(screen.getByRole("button", {name: "Remove Owner"})).toBeDisabled()
+    expect(
+        screen.queryByRole("button", {name: "Remove Owner"}),
+    ).not.toBeInTheDocument()
     expect(
         screen.getByText("Players are locked because the game has started."),
     ).toBeInTheDocument()
@@ -204,15 +244,7 @@ test("adds a trimmed guest name to the owned board and redirects", async () => {
         board.id,
         board.ownerId,
     )
-    expect(prepare).toHaveBeenCalledWith(
-        expect.stringContaining('insert into "player"'),
-    )
-    expect(bind).toHaveBeenCalledExactlyOnceWith(
-        expect.any(String),
-        board.id,
-        "Alex",
-    )
-    expect(run).toHaveBeenCalledTimes(1)
+    expect(addPlayerRecord).toHaveBeenCalledExactlyOnceWith(db, board, "Alex")
     expect(response).toBeInstanceOf(Response)
     expect((response as Response).headers.get("Location")).toBe(
         `/boards/${board.id}`,
@@ -224,7 +256,7 @@ test.each(["in", "post"] as const)(
     async state => {
         vi.mocked(getGame).mockResolvedValueOnce({...game, state})
         expect(await addPlayer()).toMatchObject({init: {status: 409}})
-        expect(run).not.toHaveBeenCalled()
+        expect(addPlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -233,13 +265,13 @@ test("checks authentication on direct submissions", async () => {
     vi.mocked(requireUser).mockRejectedValueOnce(redirect)
     await expect(addPlayer()).rejects.toBe(redirect)
     expect(getUserBoard).not.toHaveBeenCalled()
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects submissions for missing or unowned boards", async () => {
     vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
     await expect(addPlayer()).rejects.toMatchObject({init: {status: 404}})
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test.each(["", "   ", "a".repeat(101)])(
@@ -250,7 +282,7 @@ test.each(["", "   ", "a".repeat(101)])(
         ).toMatchObject({
             init: {status: 400},
         })
-        expect(run).not.toHaveBeenCalled()
+        expect(addPlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -260,48 +292,95 @@ test("rejects a missing name", async () => {
             init: {status: 400},
         },
     )
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+})
+
+test("rejects adding more than 100 players", async () => {
+    vi.mocked(getUserBoard).mockResolvedValueOnce({
+        ...board,
+        players: Array.from({length: 100}, (_, index) => ({
+            ...board.players[0],
+            id: `player-${index}`,
+        })),
+    })
+
+    expect(await addPlayer()).toMatchObject({
+        data: {error: "A board cannot have more than 100 players."},
+        init: {status: 409},
+    })
+    expect(addPlayerRecord).not.toHaveBeenCalled()
 })
 
 test("does not redirect when the insert fails", async () => {
-    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    vi.mocked(addPlayerRecord).mockRejectedValueOnce(
+        new Error("Database unavailable"),
+    )
     await expect(addPlayer()).rejects.toThrow()
 })
+
+test("shuffles every player on the owned board and redirects", async () => {
+    const response = await addPlayer(new URLSearchParams({intent: "shuffle"}))
+
+    expect(shuffleBoardRecord).toHaveBeenCalledExactlyOnceWith(db, board.id, [
+        "player-1",
+        "player-2",
+    ])
+    expect((response as Response).headers.get("Location")).toBe(
+        `/boards/${board.id}`,
+    )
+})
+
+test.each(["in", "post"] as const)(
+    "rejects shuffling for %s games",
+    async state => {
+        vi.mocked(getGame).mockResolvedValueOnce({...game, state})
+
+        expect(
+            await addPlayer(new URLSearchParams({intent: "shuffle"})),
+        ).toMatchObject({init: {status: 409}})
+        expect(shuffleBoardRecord).not.toHaveBeenCalled()
+    },
+)
 
 const removePlayer = (playerId = "player-2") =>
     addPlayer(new URLSearchParams({intent: "remove", playerId}))
 
-test.each(["player-1", "player-2"])(
-    "removes %s only from the owned board",
-    async playerId => {
-        const response = await removePlayer(playerId)
+test("removes a guest from the owned board", async () => {
+    const response = await removePlayer("player-2")
 
-        expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
-            db,
-            board.id,
-            board.ownerId,
-        )
-        expect(prepare).toHaveBeenCalledExactlyOnceWith(
-            'delete from "player" where ("player"."id" = ? and "player"."board_id" = ?)',
-        )
-        expect(bind).toHaveBeenCalledExactlyOnceWith(playerId, board.id)
-        expect(run).toHaveBeenCalledTimes(1)
-        expect((response as Response).headers.get("Location")).toBe(
-            `/boards/${board.id}`,
-        )
-    },
-)
+    expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        board.ownerId,
+    )
+    expect(removePlayerRecord).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board,
+        "player-2",
+    )
+    expect((response as Response).headers.get("Location")).toBe(
+        `/boards/${board.id}`,
+    )
+})
+
+test("rejects removal of the board owner", async () => {
+    expect(await removePlayer("player-1")).toMatchObject({
+        data: {error: "The board owner cannot be removed."},
+        init: {status: 409},
+    })
+    expect(removePlayerRecord).not.toHaveBeenCalled()
+})
 
 test("rejects removal of a missing player or a player from another board", async () => {
     expect(await removePlayer("other-board-player")).toMatchObject({
         init: {status: 404},
     })
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects removal without a player ID", async () => {
     expect(await removePlayer("")).toMatchObject({init: {status: 400}})
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test.each(["in", "post"] as const)(
@@ -309,7 +388,7 @@ test.each(["in", "post"] as const)(
     async state => {
         vi.mocked(getGame).mockResolvedValueOnce({...game, state})
         expect(await removePlayer()).toMatchObject({init: {status: 409}})
-        expect(run).not.toHaveBeenCalled()
+        expect(removePlayerRecord).not.toHaveBeenCalled()
     },
 )
 
@@ -318,17 +397,19 @@ test("requires authentication to remove players", async () => {
     vi.mocked(requireUser).mockRejectedValueOnce(redirect)
     await expect(removePlayer()).rejects.toBe(redirect)
     expect(getUserBoard).not.toHaveBeenCalled()
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects removal from an unowned board", async () => {
     vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
     await expect(removePlayer()).rejects.toMatchObject({init: {status: 404}})
-    expect(run).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("does not redirect when deleting fails", async () => {
-    run.mockRejectedValueOnce(new Error("Database unavailable"))
+    vi.mocked(removePlayerRecord).mockRejectedValueOnce(
+        new Error("Database unavailable"),
+    )
     await expect(removePlayer()).rejects.toThrow()
 })
 
@@ -336,7 +417,8 @@ test("rejects unknown actions without writing", async () => {
     expect(
         await addPlayer(new URLSearchParams({intent: "unknown"})),
     ).toMatchObject({init: {status: 400}})
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
 
 test("rejects a missing intent without writing", async () => {
@@ -344,5 +426,6 @@ test("rejects a missing intent without writing", async () => {
         data: {error: "Invalid action."},
         init: {status: 400},
     })
-    expect(run).not.toHaveBeenCalled()
+    expect(addPlayerRecord).not.toHaveBeenCalled()
+    expect(removePlayerRecord).not.toHaveBeenCalled()
 })
