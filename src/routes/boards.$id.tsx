@@ -6,6 +6,7 @@ import {requireUser} from "~/utils/auth.server"
 import {getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
 import {addPlayer, removePlayer} from "~/utils/players.server"
+import {shuffleBoard} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
@@ -41,13 +42,23 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 
     if (game.state !== "pre") {
         return data(
-            {error: "Players cannot be changed after the game has started."},
+            {error: "Boards cannot be changed after the game has started."},
             {status: 409},
         )
     }
 
     const formData = await request.formData()
     const intent = formData.get("intent")
+
+    if (intent === "shuffle") {
+        await shuffleBoard(
+            db,
+            board.id,
+            board.players.map(player => player.id),
+        )
+
+        return redirect(`/boards/${board.id}`)
+    }
 
     if (intent === "add") {
         const value = formData.get("name")
@@ -102,6 +113,8 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const isSubmitting = navigation.state === "submitting"
     const isAdding =
         isSubmitting && navigation.formData?.get("intent") === "add"
+    const isShuffling =
+        isSubmitting && navigation.formData?.get("intent") === "shuffle"
 
     return (
         <main className="space-y-6">
@@ -110,6 +123,19 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
             </Link>
 
             <Board key={game.id} game={game} squares={board.squares} />
+
+            {!isLocked ? (
+                <Form method="post" className="mx-auto max-w-3xl">
+                    <input type="hidden" name="intent" value="shuffle" />
+                    <button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="rounded bg-white/20 px-4 py-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {isShuffling ? "Shuffling…" : "Shuffle squares"}
+                    </button>
+                </Form>
+            ) : null}
 
             <section
                 aria-labelledby="players-heading"

@@ -16,6 +16,7 @@ import {
     addPlayer as addPlayerRecord,
     removePlayer as removePlayerRecord,
 } from "~/utils/players.server"
+import {shuffleBoard as shuffleBoardRecord} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
@@ -26,6 +27,7 @@ vi.mock("~/utils/players.server", () => ({
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
 }))
+vi.mock("~/utils/squares.server", () => ({shuffleBoard: vi.fn()}))
 vi.mock("~/components/Board", () => ({default: () => <div>Game board</div>}))
 
 afterEach(cleanup)
@@ -123,6 +125,7 @@ beforeEach(() => {
         {} as D1Result,
         {} as D1Result,
     ])
+    vi.mocked(shuffleBoardRecord).mockResolvedValue([{} as D1Result])
 })
 
 test("loads players and squares using the authenticated owner's board query", async () => {
@@ -188,6 +191,7 @@ test("shows an empty state for boards without players", () => {
 
 test("enables the add-player form before kickoff", () => {
     renderBoard()
+    expect(screen.getByRole("button", {name: "Shuffle squares"})).toBeEnabled()
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeEnabled()
@@ -196,6 +200,9 @@ test("enables the add-player form before kickoff", () => {
 
 test.each(["in", "post"] as const)("disables the form for %s games", state => {
     renderBoard(board.players, state)
+    expect(
+        screen.queryByRole("button", {name: "Shuffle squares"}),
+    ).not.toBeInTheDocument()
     expect(screen.getByLabelText("Player name")).toBeDisabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeDisabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeDisabled()
@@ -306,6 +313,30 @@ test("does not redirect when the insert fails", async () => {
     )
     await expect(addPlayer()).rejects.toThrow()
 })
+
+test("shuffles every player on the owned board and redirects", async () => {
+    const response = await addPlayer(new URLSearchParams({intent: "shuffle"}))
+
+    expect(shuffleBoardRecord).toHaveBeenCalledExactlyOnceWith(db, board.id, [
+        "player-1",
+        "player-2",
+    ])
+    expect((response as Response).headers.get("Location")).toBe(
+        `/boards/${board.id}`,
+    )
+})
+
+test.each(["in", "post"] as const)(
+    "rejects shuffling for %s games",
+    async state => {
+        vi.mocked(getGame).mockResolvedValueOnce({...game, state})
+
+        expect(
+            await addPlayer(new URLSearchParams({intent: "shuffle"})),
+        ).toMatchObject({init: {status: 409}})
+        expect(shuffleBoardRecord).not.toHaveBeenCalled()
+    },
+)
 
 const removePlayer = (playerId = "player-2") =>
     addPlayer(new URLSearchParams({intent: "remove", playerId}))
