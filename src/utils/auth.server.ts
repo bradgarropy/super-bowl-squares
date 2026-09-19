@@ -26,14 +26,30 @@ const auth = betterAuth({
     },
 })
 
-const requireUser = async (request: Request) => {
+const getUser = async (request: Request) => {
     const session = await auth.api.getSession({headers: request.headers})
 
     if (!session) {
+        return null
+    }
+
+    const {user} = session
+
+    if (!user) {
+        return null
+    }
+
+    return user
+}
+
+const requireUser = async (request: Request) => {
+    const user = await getUser(request)
+
+    if (!user) {
         throw redirect("/login")
     }
 
-    return session.user
+    return user
 }
 
-export {auth, requireUser}
+export {auth, getUser, requireUser}

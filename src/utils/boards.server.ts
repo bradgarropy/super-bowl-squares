@@ -2,6 +2,29 @@ import type {createDb} from "~/db/client.server"
 
 type Database = ReturnType<typeof createDb>
 
+const getBoard = (db: Database, boardId: string) => {
+    const board = db.query.board.findFirst({
+        where: (board, {eq}) => eq(board.id, boardId),
+        with: {
+            players: {
+                orderBy: (player, {asc}) => [
+                    asc(player.createdAt),
+                    asc(player.id),
+                ],
+            },
+            squares: {
+                orderBy: (square, {asc}) => [
+                    asc(square.row),
+                    asc(square.column),
+                ],
+                with: {player: true},
+            },
+        },
+    })
+
+    return board
+}
+
 const getUserBoard = (db: Database, boardId: string, userId: string) => {
     const board = db.query.board.findFirst({
         where: (board, {and, eq}) =>
@@ -35,4 +58,4 @@ const getUserBoards = (db: Database, userId: string) => {
     return boards
 }
 
-export {getUserBoard, getUserBoards}
+export {getBoard, getUserBoard, getUserBoards}

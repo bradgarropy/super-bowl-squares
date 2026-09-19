@@ -8,8 +8,8 @@ import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
 import {createDb, dbCtx} from "~/db/client.server"
 import BoardRoute, {action, loader} from "~/routes/boards.$id"
-import {requireUser} from "~/utils/auth.server"
-import {getUserBoard} from "~/utils/boards.server"
+import {getUser, requireUser} from "~/utils/auth.server"
+import {getBoard, getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
 import {
@@ -20,8 +20,14 @@ import {shuffleBoard as shuffleBoardRecord} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
-vi.mock("~/utils/auth.server", () => ({requireUser: vi.fn()}))
-vi.mock("~/utils/boards.server", () => ({getUserBoard: vi.fn()}))
+vi.mock("~/utils/auth.server", () => ({
+    getUser: vi.fn(),
+    requireUser: vi.fn(),
+}))
+vi.mock("~/utils/boards.server", () => ({
+    getBoard: vi.fn(),
+    getUserBoard: vi.fn(),
+}))
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
 vi.mock("~/utils/players.server", () => ({
     addPlayer: vi.fn(),
@@ -107,14 +113,18 @@ const loadBoard = () =>
     })
 
 beforeEach(() => {
-    vi.mocked(requireUser).mockResolvedValue({
+    const owner = {
         id: "owner-1",
         name: "Owner",
         email: "owner@example.com",
         emailVerified: true,
         createdAt: new Date(),
         updatedAt: new Date(),
-    })
+    }
+
+    vi.mocked(getUser).mockResolvedValue(owner)
+    vi.mocked(requireUser).mockResolvedValue(owner)
+    vi.mocked(getBoard).mockResolvedValue(board)
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
     vi.mocked(addPlayerRecord).mockResolvedValue([
@@ -128,41 +138,61 @@ beforeEach(() => {
     vi.mocked(shuffleBoardRecord).mockResolvedValue([{} as D1Result])
 })
 
-test("loads players and squares using the authenticated owner's board query", async () => {
+test("loads players and squares and identifies the owner", async () => {
     const result = await loadBoard()
 
-    expect(getUserBoard).toHaveBeenCalledExactlyOnceWith(
-        db,
-        board.id,
-        board.ownerId,
-    )
+    expect(getBoard).toHaveBeenCalledExactlyOnceWith(db, board.id)
     expect(result.board.players).toEqual(board.players)
     expect(result.board.squares).toEqual(board.squares)
+    expect(result.isOwner).toBe(true)
     expect(getGame).toHaveBeenCalledExactlyOnceWith(board.gameId)
 })
 
-test("returns 404 when the board is missing or not owned by the user", async () => {
-    vi.mocked(getUserBoard).mockResolvedValueOnce(undefined)
+test("returns 404 when the board is missing", async () => {
+    vi.mocked(getBoard).mockResolvedValueOnce(undefined)
 
     await expect(loadBoard()).rejects.toMatchObject({init: {status: 404}})
     expect(getGame).not.toHaveBeenCalled()
 })
 
-test("requires authentication before loading players", async () => {
-    const redirect = new Response(null, {status: 302})
-    vi.mocked(requireUser).mockRejectedValueOnce(redirect)
+test("allows signed-out visitors to load a board as a non-owner", async () => {
+    vi.mocked(getUser).mockResolvedValueOnce(null)
 
-    await expect(loadBoard()).rejects.toBe(redirect)
-    expect(getUserBoard).not.toHaveBeenCalled()
+    const result = await loadBoard()
+
+    expect(result.board).toEqual(board)
+    expect(result.isOwner).toBe(false)
+    expect(requireUser).not.toHaveBeenCalled()
+})
+
+test("allows other users to load a board as a non-owner", async () => {
+    vi.mocked(getUser).mockResolvedValueOnce({
+        id: "user-2",
+        name: "Viewer",
+        email: "viewer@example.com",
+        emailVerified: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+    })
+
+    const result = await loadBoard()
+
+    expect(result.board).toEqual(board)
+    expect(result.isOwner).toBe(false)
 })
 
 const renderBoard = (
     players = board.players,
     state: GameDetails["state"] = "pre",
     error?: string,
+    isOwner = true,
 ) => {
     const props = {
-        loaderData: {board: {...board, players}, game: {...game, state}},
+        loaderData: {
+            board: {...board, players},
+            game: {...game, state},
+            isOwner,
+        },
         actionData: error ? {error} : undefined,
     } as Route.ComponentProps
 
@@ -180,6 +210,24 @@ test("shows names for both account holders and guests", () => {
     expect(within(players).getAllByRole("listitem")).toHaveLength(2)
     expect(within(players).getByText("Owner")).toBeInTheDocument()
     expect(within(players).getByText("Alex")).toBeInTheDocument()
+})
+
+test("shows the board and players without management controls to non-owners", () => {
+    renderBoard(board.players, "pre", undefined, false)
+
+    expect(screen.getByText("Game board")).toBeInTheDocument()
+    expect(screen.getByText("Owner")).toBeInTheDocument()
+    expect(screen.getByText("Alex")).toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: "Shuffle squares"}),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Player name")).not.toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: "Add player"}),
+    ).not.toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: "Remove Alex"}),
+    ).not.toBeInTheDocument()
 })
 
 test("shows an empty state for boards without players", () => {
