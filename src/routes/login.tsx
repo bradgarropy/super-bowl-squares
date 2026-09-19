@@ -1,7 +1,15 @@
 import {isAPIError} from "better-auth/api"
-import {data, Form, Link, redirect, useActionData} from "react-router"
+import {
+    data,
+    Form,
+    Link,
+    redirect,
+    useActionData,
+    useSearchParams,
+} from "react-router"
 
 import {auth} from "~/utils/auth.server"
+import {getRedirectTo} from "~/utils/redirect"
 
 import type {Route} from "./+types/login"
 
@@ -10,6 +18,7 @@ export const action = async ({request}: Route.ActionArgs) => {
 
     const email = String(formData.get("email") ?? "")
     const password = String(formData.get("password") ?? "")
+    const redirectTo = getRedirectTo(formData.get("redirectTo"))
 
     try {
         const {headers} = await auth.api.signInEmail({
@@ -18,7 +27,7 @@ export const action = async ({request}: Route.ActionArgs) => {
             returnHeaders: true,
         })
 
-        return redirect("/boards", {headers})
+        return redirect(redirectTo, {headers})
     } catch (error) {
         if (isAPIError(error)) {
             return data(
@@ -33,12 +42,16 @@ export const action = async ({request}: Route.ActionArgs) => {
 
 const Login = () => {
     const actionData = useActionData<typeof action>()
+    const [searchParams] = useSearchParams()
+    const redirectTo = searchParams.get("redirectTo") ?? "/boards"
 
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">login</h1>
 
             <Form method="post" className="grid gap-y-4">
+                <input type="hidden" name="redirectTo" value={redirectTo} />
+
                 <div className="grid">
                     <label htmlFor="email">email</label>
 
@@ -74,7 +87,10 @@ const Login = () => {
 
             <p className="mt-10 text-center">
                 Or{" "}
-                <Link to="/signup" className="underline">
+                <Link
+                    to={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+                    className="underline"
+                >
                     sign up
                 </Link>{" "}
                 if you do not have an account.
