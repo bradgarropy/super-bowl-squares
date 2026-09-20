@@ -27,8 +27,8 @@ export const loader = async ({context, params, request}: Route.LoaderArgs) => {
     return {board, game, isOwner}
 }
 
-export const meta: Route.MetaFunction = ({params}) => {
-    return [{title: `🏈 super bowl squares | board ${params.id}`}]
+export const meta: Route.MetaFunction = () => {
+    return [{title: "🏈 squares | board"}]
 }
 
 export const action = async ({context, params, request}: Route.ActionArgs) => {

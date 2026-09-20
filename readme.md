@@ -1,4 +1,4 @@
-# 🏈 super bowl squares
+# 🏈 squares
 
 _A [React Router][react-router] app with [ESLint][eslint], [Prettier][prettier], [TypeScript][typescript], [Vitest][vitest], and [Tailwind][tailwind] included._
 
@@ -10,7 +10,7 @@ _A [React Router][react-router] app with [ESLint][eslint], [Prettier][prettier],
 
 <p align="center">
     <a href="https://super-bowl-squares.bradgarropy.workers.dev">
-        <img alt="super bowl squares" src="./public/github.png" width="800">
+        <img alt="squares" src="./public/github.png" width="800">
     </a>
 </p>
 
