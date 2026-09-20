@@ -1,9 +1,10 @@
 import {data, Form, Link, redirect, useNavigation} from "react-router"
 
 import Board from "~/components/Board"
+import ShareButton from "~/components/ShareButton"
 import {dbCtx} from "~/db/client.server"
-import {requireUser} from "~/utils/auth.server"
-import {getUserBoard} from "~/utils/boards.server"
+import {getUser, requireUser} from "~/utils/auth.server"
+import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
 import {addPlayer, removePlayer} from "~/utils/players.server"
 import {shuffleBoard} from "~/utils/squares.server"
@@ -11,18 +12,19 @@ import {shuffleBoard} from "~/utils/squares.server"
 import type {Route} from "./+types/boards.$id"
 
 export const loader = async ({context, params, request}: Route.LoaderArgs) => {
-    const user = await requireUser(request)
+    const user = await getUser(request)
     const db = context.get(dbCtx)
 
-    const board = await getUserBoard(db, params.id, user.id)
+    const board = await getBoard(db, params.id)
 
     if (!board) {
         throw data("Board not found", {status: 404})
     }
 
     const game = await getGame(board.gameId)
+    const isOwner = user?.id === board.ownerId
 
-    return {board, game}
+    return {board, game, isOwner}
 }
 
 export const meta: Route.MetaFunction = ({params}) => {
@@ -118,7 +120,7 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 }
 
 const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
-    const {board, game} = loaderData
+    const {board, game, isOwner} = loaderData
     const navigation = useNavigation()
     const isLocked = game.state !== "pre"
     const isSubmitting = navigation.state === "submitting"
@@ -129,13 +131,22 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
 
     return (
         <main className="space-y-6">
-            <Link to="/games" className="underline underline-offset-4">
-                Back to games
-            </Link>
+            <div className="flex items-center justify-between gap-4">
+                <Link to="/games" className="underline underline-offset-4">
+                    Back to games
+                </Link>
+
+                {isOwner ? (
+                    <ShareButton
+                        title={game.name}
+                        url={`/boards/${board.id}/welcome`}
+                    />
+                ) : null}
+            </div>
 
             <Board key={game.id} game={game} squares={board.squares} />
 
-            {!isLocked ? (
+            {isOwner && !isLocked ? (
                 <Form method="post" className="mx-auto max-w-3xl">
                     <input type="hidden" name="intent" value="shuffle" />
                     <button
@@ -156,45 +167,47 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                     Players
                 </h2>
 
-                <Form
-                    key={board.players.length}
-                    method="post"
-                    className="space-y-2"
-                >
-                    <input type="hidden" name="intent" value="add" />
-                    <fieldset
-                        disabled={isLocked || isSubmitting}
-                        className="flex flex-wrap items-end gap-3 disabled:opacity-50"
+                {isOwner ? (
+                    <Form
+                        key={board.players.length}
+                        method="post"
+                        className="space-y-2"
                     >
-                        <div className="grid gap-1">
-                            <label htmlFor="player-name">Player name</label>
-
-                            <input
-                                id="player-name"
-                                name="name"
-                                type="text"
-                                required
-                                maxLength={100}
-                                className="rounded bg-white px-3 py-2 text-black"
-                            />
-                        </div>
-
-                        <button
-                            type="submit"
-                            className="rounded bg-white/20 px-4 py-2 disabled:cursor-not-allowed"
+                        <input type="hidden" name="intent" value="add" />
+                        <fieldset
+                            disabled={isLocked || isSubmitting}
+                            className="flex flex-wrap items-end gap-3 disabled:opacity-50"
                         >
-                            {isAdding ? "Adding…" : "Add player"}
-                        </button>
-                    </fieldset>
+                            <div className="grid gap-1">
+                                <label htmlFor="player-name">Player name</label>
 
-                    {isLocked ? (
-                        <p className="text-sm text-gray-300">
-                            Players are locked because the game has started.
-                        </p>
-                    ) : null}
-                </Form>
+                                <input
+                                    id="player-name"
+                                    name="name"
+                                    type="text"
+                                    required
+                                    maxLength={100}
+                                    className="rounded bg-white px-3 py-2 text-black"
+                                />
+                            </div>
 
-                {actionData?.error ? (
+                            <button
+                                type="submit"
+                                className="rounded bg-white/20 px-4 py-2 disabled:cursor-not-allowed"
+                            >
+                                {isAdding ? "Adding…" : "Add player"}
+                            </button>
+                        </fieldset>
+
+                        {isLocked ? (
+                            <p className="text-sm text-gray-300">
+                                Players are locked because the game has started.
+                            </p>
+                        ) : null}
+                    </Form>
+                ) : null}
+
+                {isOwner && actionData?.error ? (
                     <p role="alert">{actionData.error}</p>
                 ) : null}
 
@@ -210,7 +223,7 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 <span className="min-w-0 wrap-break-words">
                                     {player.name}
                                 </span>
-                                {player.userId !== board.ownerId ? (
+                                {isOwner && player.userId !== board.ownerId ? (
                                     <Form method="post">
                                         <input
                                             type="hidden"

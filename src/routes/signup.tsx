@@ -1,7 +1,14 @@
 import {isAPIError} from "better-auth/api"
-import {data, Form, redirect, useActionData} from "react-router"
+import {
+    data,
+    Form,
+    redirect,
+    useActionData,
+    useSearchParams,
+} from "react-router"
 
 import {auth} from "~/utils/auth.server"
+import {getRedirectTo} from "~/utils/redirect"
 
 import type {Route} from "./+types/signup"
 
@@ -15,6 +22,7 @@ export const action = async ({request}: Route.ActionArgs) => {
     const passwordConfirmation = String(
         formData.get("passwordConfirmation") ?? "",
     )
+    const redirectTo = getRedirectTo(formData.get("redirectTo"))
 
     if (password !== passwordConfirmation) {
         return data({error: "Passwords do not match."}, {status: 400})
@@ -31,7 +39,7 @@ export const action = async ({request}: Route.ActionArgs) => {
             returnHeaders: true,
         })
 
-        return redirect("/boards", {headers})
+        return redirect(redirectTo, {headers})
     } catch (error) {
         if (isAPIError(error)) {
             return data(
@@ -46,12 +54,16 @@ export const action = async ({request}: Route.ActionArgs) => {
 
 const Signup = () => {
     const actionData = useActionData<typeof action>()
+    const [searchParams] = useSearchParams()
+    const redirectTo = searchParams.get("redirectTo") ?? "/boards"
 
     return (
         <div className="max-w-lg mx-auto">
             <h1 className="mb-10">signup</h1>
 
             <Form method="post" className="grid gap-y-4">
+                <input type="hidden" name="redirectTo" value={redirectTo} />
+
                 <fieldset className="grid grid-cols-2 grid-rows-2 gap-x-10">
                     <div className="grid">
                         <label htmlFor="firstName">first name</label>
