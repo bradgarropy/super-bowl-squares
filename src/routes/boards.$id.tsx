@@ -1,6 +1,7 @@
 import {data, Form, Link, redirect, useNavigation} from "react-router"
 
 import Board from "~/components/Board"
+import ShareButton from "~/components/ShareButton"
 import {dbCtx} from "~/db/client.server"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
@@ -130,9 +131,18 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
 
     return (
         <main className="space-y-6">
-            <Link to="/games" className="underline underline-offset-4">
-                Back to games
-            </Link>
+            <div className="flex items-center justify-between gap-4">
+                <Link to="/games" className="underline underline-offset-4">
+                    Back to games
+                </Link>
+
+                {isOwner ? (
+                    <ShareButton
+                        title={game.name}
+                        url={`/boards/${board.id}/welcome`}
+                    />
+                ) : null}
+            </div>
 
             <Board key={game.id} game={game} squares={board.squares} />
 

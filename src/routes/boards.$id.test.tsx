@@ -221,6 +221,9 @@ test("shows the board and players without management controls to non-owners", ()
     expect(
         screen.queryByRole("button", {name: "Shuffle squares"}),
     ).not.toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: "Share board"}),
+    ).not.toBeInTheDocument()
     expect(screen.queryByLabelText("Player name")).not.toBeInTheDocument()
     expect(
         screen.queryByRole("button", {name: "Add player"}),
@@ -239,6 +242,7 @@ test("shows an empty state for boards without players", () => {
 
 test("enables the add-player form before kickoff", () => {
     renderBoard()
+    expect(screen.getByRole("button", {name: "Share board"})).toBeEnabled()
     expect(screen.getByRole("button", {name: "Shuffle squares"})).toBeEnabled()
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
