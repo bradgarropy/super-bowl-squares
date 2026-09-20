@@ -31,7 +31,7 @@ const renderHeader = (user: object | null) => {
 test("shows a login link when logged out", () => {
     renderHeader(null)
 
-    expect(screen.getByText("Super Bowl Squares")).toBeTruthy()
+    expect(screen.getByText("Squares")).toBeTruthy()
     expect(screen.getByRole("link", {name: "games"})).toHaveAttribute(
         "href",
         "/games",

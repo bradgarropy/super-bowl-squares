@@ -10,7 +10,7 @@ import type {Route} from "./+types/root"
 const meta: Route.MetaFunction = () => {
     return [
         {charset: "utf-8"},
-        {title: "🏈 super bowl squares"},
+        {title: "🏈 squares"},
         {viewport: "width=device-width,initial-scale=1"},
     ]
 }

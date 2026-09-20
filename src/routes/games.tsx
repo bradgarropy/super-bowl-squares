@@ -63,7 +63,7 @@ export const action = async ({context, request}: Route.ActionArgs) => {
 }
 
 export const meta: Route.MetaFunction = () => {
-    return [{title: "🏈 super bowl squares | games"}]
+    return [{title: "🏈 squares | games"}]
 }
 
 const Games = ({loaderData}: Route.ComponentProps) => {

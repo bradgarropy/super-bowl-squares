@@ -38,8 +38,8 @@ export const loader = async ({context, params, request}: Route.LoaderArgs) => {
     }
 }
 
-export const meta: Route.MetaFunction = ({params}) => {
-    return [{title: `🏈 super bowl squares | welcome to board ${params.id}`}]
+export const meta: Route.MetaFunction = () => {
+    return [{title: "🏈 squares | welcome"}]
 }
 
 const BoardWelcome = ({loaderData}: Route.ComponentProps) => {

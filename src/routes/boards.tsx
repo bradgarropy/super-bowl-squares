@@ -24,7 +24,7 @@ export const loader = async ({context, request}: Route.LoaderArgs) => {
 }
 
 export const meta: Route.MetaFunction = () => {
-    return [{title: "🏈 super bowl squares | boards"}]
+    return [{title: "🏈 squares | boards"}]
 }
 
 const Boards = ({loaderData}: Route.ComponentProps) => {
