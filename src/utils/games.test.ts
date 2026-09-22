@@ -2,8 +2,10 @@ import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
 import {
     getGame,
+    getGames,
     getLiveGames,
     getRecentGames,
+    getSeason,
     getUpcomingGames,
 } from "~/utils/games"
 
@@ -40,6 +42,7 @@ const createEvent = (
     id = "401874048",
     date = "2026-08-29T00:00Z",
     status = "STATUS_SCHEDULED",
+    season = 2026,
 ) => {
     const completed = ["STATUS_FINAL", "STATUS_FINAL_OVERTIME"].includes(status)
     const state =
@@ -54,6 +57,11 @@ const createEvent = (
         id,
         date,
         name: "New Orleans Saints at Dallas Cowboys",
+        season: {
+            year: season,
+            type: 2,
+            slug: "regular-season",
+        },
         status: {
             type: {
                 name: status,
@@ -87,7 +95,61 @@ afterEach(() => {
     fetchMock.mockReset()
 })
 
-test("requests a date range and returns a small, typed game shape", async () => {
+test.each([
+    ["2027-01-15T12:00:00Z", 2026],
+    ["2027-02-15T12:00:00Z", 2026],
+    ["2027-03-01T00:00:00Z", 2027],
+    ["2027-12-31T23:59:59Z", 2027],
+])("gets the NFL season for %s", (date, season) => {
+    vi.setSystemTime(new Date(date))
+    expect(getSeason()).toBe(season)
+})
+
+test("gets one NFL season across calendar years", async () => {
+    fetchMock.mockResolvedValueOnce(
+        Response.json({
+            events: [
+                createEvent("regular", "2026-09-10T00:00Z"),
+                createEvent(
+                    "previous-season",
+                    "2026-01-10T00:00Z",
+                    "STATUS_FINAL",
+                    2025,
+                ),
+            ],
+        }),
+    )
+    fetchMock.mockResolvedValueOnce(
+        Response.json({
+            events: [
+                createEvent(
+                    "super-bowl",
+                    "2027-02-14T00:00Z",
+                    "STATUS_FINAL",
+                ),
+                createEvent(
+                    "next-season",
+                    "2027-09-09T00:00Z",
+                    "STATUS_SCHEDULED",
+                    2027,
+                ),
+            ],
+        }),
+    )
+
+    expect((await getGames()).map(game => game.id)).toEqual([
+        "regular",
+        "super-bowl",
+    ])
+
+    const urls = fetchMock.mock.calls.map(call => new URL(String(call[0])))
+    expect(urls.map(url => url.searchParams.get("dates"))).toEqual([
+        "2026",
+        "2027",
+    ])
+})
+
+test("requests the season and returns a small, typed game shape", async () => {
     fetchMock.mockResolvedValue(Response.json({events: [createEvent()]}))
 
     expect(await getUpcomingGames()).toEqual([
@@ -95,6 +157,7 @@ test("requests a date range and returns a small, typed game shape", async () => 
             id: "401874048",
             name: "New Orleans Saints at Dallas Cowboys",
             date: "2026-08-29T00:00Z",
+            state: "pre",
             teams: {
                 home: {
                     id: "6",
@@ -118,7 +181,7 @@ test("requests a date range and returns a small, typed game shape", async () => 
     expect(url.origin + url.pathname).toBe(
         "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
-    expect(url.searchParams.get("dates")).toBe("20260826-20260903")
+    expect(url.searchParams.get("dates")).toBe("2026")
     expect(url.searchParams.get("limit")).toBe("1000")
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(url)
 })
@@ -170,6 +233,7 @@ test("falls back to the next five scheduled games", async () => {
             ],
         }),
     )
+    fetchMock.mockResolvedValueOnce(Response.json({events: []}))
 
     expect((await getUpcomingGames()).map(game => game.id)).toEqual([
         "first",
@@ -180,10 +244,10 @@ test("falls back to the next five scheduled games", async () => {
     ])
 
     const fallbackUrl = new URL(String(fetchMock.mock.calls[1][0]))
-    expect(fallbackUrl.searchParams.get("dates")).toBe("20260827-20270827")
+    expect(fallbackUrl.searchParams.get("dates")).toBe("2026")
 })
 
-test("includes the previous ESPN calendar date for late-night kickoffs", async () => {
+test("filters late-night kickoffs by their exact time", async () => {
     vi.setSystemTime(new Date("2026-09-01T00:00:00Z"))
     fetchMock.mockResolvedValue(
         Response.json({events: [createEvent("late", "2026-09-01T01:00Z")]}),
@@ -191,7 +255,7 @@ test("includes the previous ESPN calendar date for late-night kickoffs", async (
 
     expect((await getUpcomingGames()).map(game => game.id)).toEqual(["late"])
     const url = new URL(String(fetchMock.mock.calls[0][0]))
-    expect(url.searchParams.get("dates")).toBe("20260831-20260908")
+    expect(url.searchParams.get("dates")).toBe("2026")
 })
 
 test("reports an HTTP error instead of returning an empty list", async () => {
@@ -231,6 +295,7 @@ test("requests the past week and maps recent games with home and away teams", as
             id: "recent",
             name: "New Orleans Saints at Dallas Cowboys",
             date: "2026-08-26T00:00Z",
+            state: "post",
             teams: {
                 home: {
                     id: "6",
@@ -254,7 +319,7 @@ test("requests the past week and maps recent games with home and away teams", as
     expect(url.origin + url.pathname).toBe(
         "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
-    expect(url.searchParams.get("dates")).toBe("20260819-20260827")
+    expect(url.searchParams.get("dates")).toBe("2026")
     expect(url.searchParams.get("limit")).toBe("1000")
     expect(fetchMock).toHaveBeenCalledExactlyOnceWith(url)
 })
@@ -300,15 +365,19 @@ test("returns an empty list when there are no recent games", async () => {
 
 test("handles recent games across year boundaries and midnight UTC", async () => {
     vi.setSystemTime(new Date("2027-01-03T00:00:00Z"))
-    fetchMock.mockResolvedValue(
+    fetchMock.mockResolvedValueOnce(
         Response.json({
             events: [createEvent("late", "2026-12-27T01:00Z", "STATUS_FINAL")],
         }),
     )
+    fetchMock.mockResolvedValueOnce(Response.json({events: []}))
 
     expect((await getRecentGames()).map(game => game.id)).toEqual(["late"])
-    const url = new URL(String(fetchMock.mock.calls[0][0]))
-    expect(url.searchParams.get("dates")).toBe("20261226-20270103")
+    const urls = fetchMock.mock.calls.map(call => new URL(String(call[0])))
+    expect(urls.map(url => url.searchParams.get("dates"))).toEqual([
+        "2026",
+        "2027",
+    ])
 })
 
 test("propagates HTTP errors when fetching recent games", async () => {
@@ -677,5 +746,5 @@ test("returns only live games, ordered by kickoff", async () => {
     ])
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
-    expect(url.searchParams.get("dates")).toBe("20260826-20260827")
+    expect(url.searchParams.get("dates")).toBe("2026")
 })

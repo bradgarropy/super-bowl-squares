@@ -20,6 +20,7 @@ type Game = {
     id: string
     name: string
     date: string
+    state: EspnGameState
     teams: {
         home: Team
         away: Team
@@ -33,7 +34,6 @@ type QuarterScore = {
 }
 
 type GameDetails = Game & {
-    state: EspnGameState
     quarter: number
     clock: string
     score: {
@@ -64,11 +64,34 @@ const createGame = (event: EspnScoreboard["events"][number]): Game => {
         id: event.id,
         name: event.name,
         date: event.date,
+        state: event.status.type.state,
         teams: {
             home: createTeam(home.team),
             away: createTeam(away.team),
         },
     }
+}
+
+const getSeason = (): number => {
+    const now = new Date()
+    const year = now.getUTCFullYear()
+    const month = now.getUTCMonth()
+
+    const season = month < 2 ? year - 1 : year
+    return season
+}
+
+const getGames = async (year = getSeason()): Promise<Game[]> => {
+    const scoreboards = await Promise.all([
+        getScoreboard(year),
+        getScoreboard(year + 1),
+    ])
+
+    return scoreboards
+        .flatMap(scoreboard => scoreboard.events)
+        .filter(event => event.season.year === year)
+        .sort((a, b) => Date.parse(a.date) - Date.parse(b.date))
+        .map(createGame)
 }
 
 const getScores = (
@@ -136,12 +159,15 @@ const getGame = async (id: string): Promise<GameDetails> => {
 }
 
 const getScoreboardForRange = async (start: Date, end: Date) => {
-    // ESPN groups games by US calendar dates. Include the previous day so
-    // late-night games aren't missed; callers filter exact kickoff times.
-    const queryStart = new Date(start)
-    queryStart.setUTCDate(queryStart.getUTCDate() - 1)
+    const years = Array.from(
+        {length: end.getUTCFullYear() - start.getUTCFullYear() + 1},
+        (_, index) => start.getUTCFullYear() + index,
+    )
+    const scoreboards = await Promise.all(years.map(getScoreboard))
 
-    return getScoreboard(queryStart, end)
+    return {
+        events: scoreboards.flatMap(scoreboard => scoreboard.events),
+    }
 }
 
 /** NFL games currently in progress. */
@@ -183,7 +209,7 @@ const getUpcomingGames = async (): Promise<Game[]> => {
     const oneYearLater = new Date(now)
     oneYearLater.setUTCFullYear(oneYearLater.getUTCFullYear() + 1)
 
-    const yearScoreboard = await getScoreboard(now, oneYearLater)
+    const yearScoreboard = await getScoreboardForRange(now, oneYearLater)
 
     const upcomingYearGames = yearScoreboard.events
         .filter(
@@ -220,5 +246,12 @@ const getRecentGames = async (): Promise<Game[]> => {
         .map(createGame)
 }
 
-export {getGame, getLiveGames, getRecentGames, getUpcomingGames}
+export {
+    getGame,
+    getGames,
+    getLiveGames,
+    getRecentGames,
+    getSeason,
+    getUpcomingGames,
+}
 export type {Game, GameDetails, QuarterScore, Team}

@@ -16,6 +16,11 @@ test("returns the scoreboard response without transforming it", async () => {
                 id: "401874048",
                 name: "New Orleans Saints at Dallas Cowboys",
                 date: "2026-08-29T00:00Z",
+                season: {
+                    year: 2026,
+                    type: 2,
+                    slug: "regular-season",
+                },
                 status: {
                     type: {
                         name: "STATUS_SCHEDULED",
@@ -29,16 +34,13 @@ test("returns the scoreboard response without transforming it", async () => {
     }
     fetchMock.mockResolvedValue(Response.json(scoreboard))
 
-    const start = new Date("2026-08-27T00:00Z")
-    const end = new Date("2026-09-03T00:00Z")
-
-    expect(await getScoreboard(start, end)).toEqual(scoreboard)
+    expect(await getScoreboard(2026)).toEqual(scoreboard)
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.origin + url.pathname).toBe(
         "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
-    expect(url.searchParams.get("dates")).toBe("20260827-20260903")
+    expect(url.searchParams.get("dates")).toBe("2026")
     expect(url.searchParams.get("limit")).toBe("1000")
 })
 
@@ -64,7 +66,7 @@ test("reports scoreboard HTTP errors", async () => {
     fetchMock.mockResolvedValue(new Response(null, {status: 403}))
 
     await expect(
-        getScoreboard(new Date("2026-08-27"), new Date("2026-09-03")),
+        getScoreboard(2026),
     ).rejects.toThrow("ESPN scoreboard request failed: 403")
 })
 
