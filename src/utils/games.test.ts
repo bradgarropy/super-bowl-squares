@@ -116,11 +116,7 @@ test("gets one NFL season across calendar years", async () => {
     fetchMock.mockResolvedValueOnce(
         Response.json({
             events: [
-                createEvent(
-                    "super-bowl",
-                    "2027-02-14T00:00Z",
-                    "STATUS_FINAL",
-                ),
+                createEvent("super-bowl", "2027-02-14T00:00Z", "STATUS_FINAL"),
                 createEvent(
                     "next-season",
                     "2027-09-09T00:00Z",

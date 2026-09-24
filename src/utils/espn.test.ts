@@ -65,9 +65,9 @@ test("returns the summary response without transforming it", async () => {
 test("reports scoreboard HTTP errors", async () => {
     fetchMock.mockResolvedValue(new Response(null, {status: 403}))
 
-    await expect(
-        getScoreboard(2026),
-    ).rejects.toThrow("ESPN scoreboard request failed: 403")
+    await expect(getScoreboard(2026)).rejects.toThrow(
+        "ESPN scoreboard request failed: 403",
+    )
 })
 
 test("reports summary HTTP errors", async () => {
