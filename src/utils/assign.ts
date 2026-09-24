@@ -1,7 +1,6 @@
-import type {square} from "~/db/schema"
+import type {NewSquare, Player} from "~/db/schema"
 
-type Square = typeof square.$inferInsert
-type SquareAssignment = Omit<Square, "boardId">
+type SquareAssignment = Omit<NewSquare, "boardId">
 
 const shuffle = <Value>(values: Value[]): Value[] => {
     const shuffled = [...values]
@@ -17,7 +16,7 @@ const shuffle = <Value>(values: Value[]): Value[] => {
     return shuffled
 }
 
-const assignSquares = (playerIds: string[]): SquareAssignment[] => {
+const assignSquares = (playerIds: Player["id"][]): SquareAssignment[] => {
     if (playerIds.length === 0) {
         return []
     }

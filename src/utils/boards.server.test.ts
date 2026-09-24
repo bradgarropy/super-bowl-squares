@@ -1,9 +1,7 @@
 import {expect, test, vi} from "vitest"
 
-import type {createDb} from "~/db/client.server"
+import type {Database} from "~/db/client.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
-
-type Database = ReturnType<typeof createDb>
 
 test("loads a board with its players and assigned squares", () => {
     const findFirst = vi.fn()

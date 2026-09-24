@@ -1,4 +1,11 @@
-import {data, Form, Link, redirect, useNavigation} from "react-router"
+import {
+    data,
+    Form,
+    Link,
+    redirect,
+    useFetcher,
+    useNavigation,
+} from "react-router"
 
 import Board from "~/components/Board"
 import ShareButton from "~/components/ShareButton"
@@ -6,6 +13,7 @@ import {dbCtx} from "~/db/client.server"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
+import {invitePlayer} from "~/utils/invites.server"
 import {addPlayer, removePlayer} from "~/utils/players.server"
 import {shuffleBoard} from "~/utils/squares.server"
 
@@ -40,6 +48,42 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         throw data("Board not found", {status: 404})
     }
 
+    const formData = await request.formData()
+    const intent = formData.get("intent")
+
+    if (intent === "invite") {
+        const playerId = formData.get("playerId")
+
+        if (typeof playerId !== "string" || !playerId) {
+            return data({error: "Player is required."}, {status: 400})
+        }
+
+        const selectedPlayer = board.players.find(
+            player => player.id === playerId,
+        )
+
+        if (!selectedPlayer) {
+            return data({error: "Player not found."}, {status: 404})
+        }
+
+        if (selectedPlayer.userId) {
+            return data(
+                {error: "This player has already been claimed."},
+                {status: 409},
+            )
+        }
+
+        const token = await invitePlayer(db, board.id, selectedPlayer.id)
+        const inviteUrl = new URL(
+            `/boards/${board.id}/invites/${token}`,
+            request.url,
+        ).toString()
+
+        console.log("Invite URL", inviteUrl)
+
+        return {inviteUrl}
+    }
+
     const game = await getGame(board.gameId)
 
     if (game.state !== "pre") {
@@ -48,9 +92,6 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             {status: 409},
         )
     }
-
-    const formData = await request.formData()
-    const intent = formData.get("intent")
 
     if (intent === "shuffle") {
         await shuffleBoard(
@@ -121,6 +162,7 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 
 const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const {board, game, isOwner} = loaderData
+    const inviteFetcher = useFetcher<typeof action>()
     const navigation = useNavigation()
     const isLocked = game.state !== "pre"
     const isSubmitting = navigation.state === "submitting"
@@ -128,10 +170,6 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
         isSubmitting && navigation.formData?.get("intent") === "add"
     const isShuffling =
         isSubmitting && navigation.formData?.get("intent") === "shuffle"
-
-    const invitePlayer = (player: (typeof board.players)[number]) => {
-        console.log("Invite player", player)
-    }
 
     return (
         <main className="space-y-6">
@@ -211,7 +249,7 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                     </Form>
                 ) : null}
 
-                {isOwner && actionData?.error ? (
+                {isOwner && actionData && "error" in actionData ? (
                     <p role="alert">{actionData.error}</p>
                 ) : null}
 
@@ -230,15 +268,34 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 {isOwner ? (
                                     <div className="flex items-center gap-2">
                                         {!player.userId ? (
-                                            <button
-                                                type="button"
-                                                className="rounded bg-white/20 px-3 py-1"
-                                                onClick={() =>
-                                                    invitePlayer(player)
-                                                }
-                                            >
-                                                Invite
-                                            </button>
+                                            <inviteFetcher.Form method="post">
+                                                <input
+                                                    type="hidden"
+                                                    name="intent"
+                                                    value="invite"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="playerId"
+                                                    value={player.id}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    disabled={
+                                                        inviteFetcher.state !==
+                                                        "idle"
+                                                    }
+                                                    className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {inviteFetcher.state !==
+                                                        "idle" &&
+                                                    inviteFetcher.formData?.get(
+                                                        "playerId",
+                                                    ) === player.id
+                                                        ? "Inviting…"
+                                                        : "Invite"}
+                                                </button>
+                                            </inviteFetcher.Form>
                                         ) : null}
 
                                         {player.userId !== board.ownerId ? (

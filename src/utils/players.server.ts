@@ -1,16 +1,18 @@
 import {and, eq} from "drizzle-orm"
 
-import type {createDb} from "~/db/client.server"
-import {player} from "~/db/schema"
+import type {Database} from "~/db/client.server"
+import {type Board, type NewPlayer, type Player, player} from "~/db/schema"
 import {createShuffleQueries} from "~/utils/squares.server"
 
-type Database = ReturnType<typeof createDb>
-type Board = {
-    id: string
-    players: {id: string}[]
+type BoardWithPlayers = Pick<Board, "id"> & {
+    players: Pick<Player, "id">[]
 }
 
-const addPlayer = (db: Database, board: Board, name: string) => {
+const addPlayer = (
+    db: Database,
+    board: BoardWithPlayers,
+    name: NewPlayer["name"],
+) => {
     const playerId = crypto.randomUUID()
     const insertPlayer = db
         .insert(player)
@@ -23,7 +25,11 @@ const addPlayer = (db: Database, board: Board, name: string) => {
     ])
 }
 
-const removePlayer = (db: Database, board: Board, playerId: string) => {
+const removePlayer = (
+    db: Database,
+    board: BoardWithPlayers,
+    playerId: Player["id"],
+) => {
     const deletePlayer = db
         .delete(player)
         .where(and(eq(player.id, playerId), eq(player.boardId, board.id)))

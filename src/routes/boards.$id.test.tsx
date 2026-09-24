@@ -1,4 +1,4 @@
-import {cleanup, fireEvent, render, screen, within} from "@testing-library/react"
+import {cleanup, render, screen, within} from "@testing-library/react"
 import {
     createMemoryRouter,
     RouterContextProvider,
@@ -12,6 +12,7 @@ import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
+import {invitePlayer as invitePlayerRecord} from "~/utils/invites.server"
 import {
     addPlayer as addPlayerRecord,
     removePlayer as removePlayerRecord,
@@ -29,6 +30,7 @@ vi.mock("~/utils/boards.server", () => ({
     getUserBoard: vi.fn(),
 }))
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
+vi.mock("~/utils/invites.server", () => ({invitePlayer: vi.fn()}))
 vi.mock("~/utils/players.server", () => ({
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
@@ -130,6 +132,7 @@ beforeEach(() => {
     vi.mocked(getBoard).mockResolvedValue(board)
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
+    vi.mocked(invitePlayerRecord).mockResolvedValue("invite-token")
     vi.mocked(addPlayerRecord).mockResolvedValue([
         {} as D1Result,
         {} as D1Result,
@@ -200,7 +203,13 @@ const renderBoard = (
     } as Route.ComponentProps
 
     const router = createMemoryRouter(
-        [{path: "/boards/:id", element: <BoardRoute {...props} />}],
+        [
+            {
+                path: "/boards/:id",
+                element: <BoardRoute {...props} />,
+                action: () => ({inviteUrl: "https://example.com/invite"}),
+            },
+        ],
         {initialEntries: [`/boards/${board.id}`]},
     )
     render(<RouterProvider router={router} />)
@@ -213,19 +222,6 @@ test("shows names for both account holders and guests", () => {
     expect(within(players).getAllByRole("listitem")).toHaveLength(2)
     expect(within(players).getByText("Owner")).toBeInTheDocument()
     expect(within(players).getByText("Alex")).toBeInTheDocument()
-})
-
-test("logs the unclaimed player selected for an invitation", () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => {})
-    renderBoard()
-
-    fireEvent.click(screen.getByRole("button", {name: "Invite"}))
-
-    expect(log).toHaveBeenCalledExactlyOnceWith(
-        "Invite player",
-        board.players[1],
-    )
-    log.mockRestore()
 })
 
 test("shows the board and players without management controls to non-owners", () => {
@@ -308,6 +304,59 @@ const addPlayer = (
         url: new URL(`https://example.com/boards/${board.id}`),
         pattern: "/boards/:id",
     })
+
+const invitePlayer = (playerId = "player-2") =>
+    addPlayer(new URLSearchParams({intent: "invite", playerId}))
+
+test("creates a fresh invitation for an unclaimed player", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {})
+    const response = await invitePlayer()
+    const inviteUrl = `https://example.com/boards/${board.id}/invites/invite-token`
+
+    expect(invitePlayerRecord).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        "player-2",
+    )
+    expect(response).toEqual({inviteUrl})
+    expect(log).toHaveBeenCalledExactlyOnceWith("Invite URL", inviteUrl)
+    log.mockRestore()
+})
+
+test.each(["in", "post"] as const)(
+    "allows invitations while the game is %s",
+    async state => {
+        vi.mocked(getGame).mockResolvedValue({...game, state})
+
+        await invitePlayer()
+
+        expect(invitePlayerRecord).toHaveBeenCalledExactlyOnceWith(
+            db,
+            board.id,
+            "player-2",
+        )
+        expect(getGame).not.toHaveBeenCalled()
+    },
+)
+
+test("rejects invitations without a player ID", async () => {
+    expect(await invitePlayer("")).toMatchObject({init: {status: 400}})
+    expect(invitePlayerRecord).not.toHaveBeenCalled()
+})
+
+test("rejects invitations for a player outside the board", async () => {
+    expect(await invitePlayer("other-player")).toMatchObject({
+        init: {status: 404},
+    })
+    expect(invitePlayerRecord).not.toHaveBeenCalled()
+})
+
+test("rejects invitations for a claimed player", async () => {
+    expect(await invitePlayer("player-1")).toMatchObject({
+        init: {status: 409},
+    })
+    expect(invitePlayerRecord).not.toHaveBeenCalled()
+})
 
 test("adds a trimmed guest name to the owned board and redirects", async () => {
     const response = await addPlayer()

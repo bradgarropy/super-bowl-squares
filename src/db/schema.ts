@@ -119,5 +119,13 @@ const squareRelations = relations(square, ({one}) => ({
     }),
 }))
 
+type Board = typeof board.$inferSelect
+type Player = typeof player.$inferSelect
+type Square = typeof square.$inferSelect
+type NewBoard = typeof board.$inferInsert
+type NewPlayer = typeof player.$inferInsert
+type NewSquare = typeof square.$inferInsert
+
 export * from "~/db/auth"
 export {board, boardRelations, player, playerRelations, square, squareRelations}
+export type {Board, NewBoard, NewPlayer, NewSquare, Player, Square}

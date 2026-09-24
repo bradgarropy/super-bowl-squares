@@ -4,7 +4,7 @@ import {getPlatformProxy} from "wrangler"
 
 import {account, rateLimit, session, user, verification} from "~/db/auth"
 import {createDb} from "~/db/client.server"
-import {board, player, square} from "~/db/schema"
+import {board, type NewPlayer, player, square} from "~/db/schema"
 import * as schema from "~/db/schema"
 import {shuffleBoard} from "~/utils/squares.server"
 
@@ -97,7 +97,7 @@ const main = async () => {
                     userId: null,
                     name,
                 })),
-            ]
+            ] satisfies NewPlayer[]
 
             await db.batch([
                 db
