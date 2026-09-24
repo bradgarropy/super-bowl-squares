@@ -4,24 +4,19 @@ import DateTime from "~/components/DateTime"
 import {dbCtx} from "~/db/client.server"
 import {board, player} from "~/db/schema"
 import {requireUser} from "~/utils/auth.server"
-import {
-    getGame,
-    getLiveGames,
-    getRecentGames,
-    getUpcomingGames,
-} from "~/utils/games"
+import {getGame, getGames} from "~/utils/games"
 import {createShuffleQueries} from "~/utils/squares.server"
 
 import type {Route} from "./+types/games"
 
 export const loader = async () => {
-    const [recentGames, liveGames, upcomingGames] = await Promise.all([
-        getRecentGames(),
-        getLiveGames(),
-        getUpcomingGames(),
-    ])
+    const games = await getGames()
 
-    return {recentGames, liveGames, upcomingGames}
+    const completedGames = games.filter(game => game.state === "post").reverse()
+    const liveGames = games.filter(game => game.state === "in")
+    const upcomingGames = games.filter(game => game.state === "pre")
+
+    return {completedGames, liveGames, upcomingGames}
 }
 
 export const action = async ({context, request}: Route.ActionArgs) => {
@@ -67,7 +62,7 @@ export const meta: Route.MetaFunction = () => {
 }
 
 const Games = ({loaderData}: Route.ComponentProps) => {
-    const {recentGames, liveGames, upcomingGames} = loaderData
+    const {completedGames, liveGames, upcomingGames} = loaderData
     const actionData = useActionData<typeof action>()
 
     return (
@@ -75,16 +70,19 @@ const Games = ({loaderData}: Route.ComponentProps) => {
             <h1 className="text-2xl font-bold">Games</h1>
 
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-                <section aria-labelledby="recent-games" className="space-y-4">
-                    <h2 id="recent-games" className="text-xl font-bold">
-                        Recent games
+                <section
+                    aria-labelledby="completed-games"
+                    className="space-y-4"
+                >
+                    <h2 id="completed-games" className="text-xl font-bold">
+                        Completed games
                     </h2>
 
-                    {recentGames.length === 0 ? (
-                        <p>No recent NFL games in the past seven days.</p>
+                    {completedGames.length === 0 ? (
+                        <p>No completed NFL games this season.</p>
                     ) : (
                         <ul className="space-y-4">
-                            {recentGames.map(game => (
+                            {completedGames.map(game => (
                                 <li key={game.id}>
                                     <h3 className="font-semibold">
                                         {game.name}

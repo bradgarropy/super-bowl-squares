@@ -16,11 +16,11 @@ type EspnTeam = {
 }
 
 type EspnScoreboardTeam = EspnTeam & {
-    logo: string
+    logo?: string
 }
 
 type EspnSummaryTeam = EspnTeam & {
-    logos: {
+    logos?: {
         href: string
     }[]
 }

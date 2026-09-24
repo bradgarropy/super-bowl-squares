@@ -2,12 +2,12 @@ import {RouterContextProvider} from "react-router"
 import {beforeEach, expect, test, vi} from "vitest"
 
 import {createDb, dbCtx} from "~/db/client.server"
-import {action} from "~/routes/games"
+import {action, loader} from "~/routes/games"
 import {requireUser} from "~/utils/auth.server"
-import {getGame} from "~/utils/games"
+import {getGame, getGames} from "~/utils/games"
 
 vi.mock("~/utils/auth.server", () => ({requireUser: vi.fn()}))
-vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
+vi.mock("~/utils/games", () => ({getGame: vi.fn(), getGames: vi.fn()}))
 
 const db = createDb({} as Env["DB"])
 const batch = vi.spyOn(db, "batch")
@@ -58,7 +58,26 @@ const submit = (gameId = game.id) =>
 beforeEach(() => {
     vi.mocked(requireUser).mockResolvedValue(user)
     vi.mocked(getGame).mockResolvedValue(game)
+    vi.mocked(getGames).mockResolvedValue([])
     batch.mockResolvedValue([])
+})
+
+test("groups the season by game state", async () => {
+    vi.mocked(getGames).mockResolvedValueOnce([
+        {...game, id: "completed-1", state: "post"},
+        {...game, id: "completed-2", state: "post"},
+        {...game, id: "live", state: "in"},
+        {...game, id: "upcoming", state: "pre"},
+    ])
+
+    expect(await loader()).toEqual({
+        completedGames: [
+            {...game, id: "completed-2", state: "post"},
+            {...game, id: "completed-1", state: "post"},
+        ],
+        liveGames: [{...game, id: "live", state: "in"}],
+        upcomingGames: [{...game, id: "upcoming", state: "pre"}],
+    })
 })
 
 test("creates the board, owner player, and square assignments in one batch", async () => {
