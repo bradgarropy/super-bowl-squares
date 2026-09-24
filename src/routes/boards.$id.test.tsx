@@ -1,4 +1,4 @@
-import {cleanup, render, screen, within} from "@testing-library/react"
+import {cleanup, fireEvent, render, screen, within} from "@testing-library/react"
 import {
     createMemoryRouter,
     RouterContextProvider,
@@ -212,6 +212,19 @@ test("shows names for both account holders and guests", () => {
     expect(within(players).getByText("Alex")).toBeInTheDocument()
 })
 
+test("logs the unclaimed player selected for an invitation", () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => {})
+    renderBoard()
+
+    fireEvent.click(screen.getByRole("button", {name: "Invite"}))
+
+    expect(log).toHaveBeenCalledExactlyOnceWith(
+        "Invite player",
+        board.players[1],
+    )
+    log.mockRestore()
+})
+
 test("shows the board and players without management controls to non-owners", () => {
     renderBoard(board.players, "pre", undefined, false)
 
@@ -231,6 +244,9 @@ test("shows the board and players without management controls to non-owners", ()
     expect(
         screen.queryByRole("button", {name: "Remove Alex"}),
     ).not.toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: "Invite"}),
+    ).not.toBeInTheDocument()
 })
 
 test("shows an empty state for boards without players", () => {
@@ -247,6 +263,7 @@ test("enables the add-player form before kickoff", () => {
     expect(screen.getByLabelText("Player name")).toBeEnabled()
     expect(screen.getByRole("button", {name: "Add player"})).toBeEnabled()
     expect(screen.getByRole("button", {name: "Remove Alex"})).toBeEnabled()
+    expect(screen.getByRole("button", {name: "Invite"})).toBeEnabled()
     expect(
         screen.queryByRole("button", {name: "Remove Owner"}),
     ).not.toBeInTheDocument()

@@ -129,6 +129,10 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const isShuffling =
         isSubmitting && navigation.formData?.get("intent") === "shuffle"
 
+    const invitePlayer = (player: (typeof board.players)[number]) => {
+        console.log("Invite player", player)
+    }
+
     return (
         <main className="space-y-6">
             <div className="flex items-center justify-between gap-4">
@@ -223,35 +227,53 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 <span className="min-w-0 wrap-break-words">
                                     {player.name}
                                 </span>
-                                {isOwner && player.userId !== board.ownerId ? (
-                                    <Form method="post">
-                                        <input
-                                            type="hidden"
-                                            name="intent"
-                                            value="remove"
-                                        />
-                                        <input
-                                            type="hidden"
-                                            name="playerId"
-                                            value={player.id}
-                                        />
-                                        <button
-                                            type="submit"
-                                            aria-label={`Remove ${player.name}`}
-                                            disabled={isLocked || isSubmitting}
-                                            className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                        >
-                                            {isSubmitting &&
-                                            navigation.formData?.get(
-                                                "intent",
-                                            ) === "remove" &&
-                                            navigation.formData?.get(
-                                                "playerId",
-                                            ) === player.id
-                                                ? "Removing…"
-                                                : "Remove"}
-                                        </button>
-                                    </Form>
+                                {isOwner ? (
+                                    <div className="flex items-center gap-2">
+                                        {!player.userId ? (
+                                            <button
+                                                type="button"
+                                                className="rounded bg-white/20 px-3 py-1"
+                                                onClick={() =>
+                                                    invitePlayer(player)
+                                                }
+                                            >
+                                                Invite
+                                            </button>
+                                        ) : null}
+
+                                        {player.userId !== board.ownerId ? (
+                                            <Form method="post">
+                                                <input
+                                                    type="hidden"
+                                                    name="intent"
+                                                    value="remove"
+                                                />
+                                                <input
+                                                    type="hidden"
+                                                    name="playerId"
+                                                    value={player.id}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    aria-label={`Remove ${player.name}`}
+                                                    disabled={
+                                                        isLocked || isSubmitting
+                                                    }
+                                                    className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {isSubmitting &&
+                                                    navigation.formData?.get(
+                                                        "intent",
+                                                    ) === "remove" &&
+                                                    navigation.formData?.get(
+                                                        "playerId",
+                                                    ) === player.id
+                                                        ? "Removing…"
+                                                        : "Remove"}
+                                                </button>
+                                            </Form>
+                                        ) : null}
+                                    </div>
                                 ) : null}
                             </li>
                         ))}
