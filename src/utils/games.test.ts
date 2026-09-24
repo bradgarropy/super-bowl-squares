@@ -1,5 +1,6 @@
 import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
+import type {EspnScoreboard} from "~/utils/espn"
 import {getGame, getGames, getSeason} from "~/utils/games"
 
 const homeTeam = {
@@ -36,7 +37,7 @@ const createEvent = (
     date = "2026-08-29T00:00Z",
     status = "STATUS_SCHEDULED",
     season = 2026,
-) => {
+): EspnScoreboard["events"][number] => {
     const completed = ["STATUS_FINAL", "STATUS_FINAL_OVERTIME"].includes(status)
     const state =
         status === "STATUS_IN_PROGRESS"
