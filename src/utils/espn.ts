@@ -16,11 +16,11 @@ type EspnTeam = {
 }
 
 type EspnScoreboardTeam = EspnTeam & {
-    logo: string
+    logo?: string
 }
 
 type EspnSummaryTeam = EspnTeam & {
-    logos: {
+    logos?: {
         href: string
     }[]
 }
@@ -29,11 +29,18 @@ type EspnLineScore = {
     displayValue: string
 }
 
+type EspnSeason = {
+    year: number
+    type: number
+    slug: string
+}
+
 type EspnScoreboard = {
     events: {
         id: string
         name: string
         date: string
+        season: EspnSeason
         status: EspnStatus
         competitions: {
             competitors: {
@@ -63,19 +70,12 @@ type EspnSummary = {
     }
 }
 
-const formatDate = (date: Date) => {
-    return date.toISOString().slice(0, 10).replaceAll("-", "")
-}
-
-const getScoreboard = async (
-    start: Date,
-    end: Date,
-): Promise<EspnScoreboard> => {
+const getScoreboard = async (year: number): Promise<EspnScoreboard> => {
     const url = new URL(
         "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
 
-    url.searchParams.set("dates", `${formatDate(start)}-${formatDate(end)}`)
+    url.searchParams.set("dates", String(year))
     url.searchParams.set("limit", "1000")
 
     const response = await fetch(url)
@@ -109,6 +109,7 @@ export type {
     EspnLineScore,
     EspnScoreboard,
     EspnScoreboardTeam,
+    EspnSeason,
     EspnSummary,
     EspnSummaryTeam,
 }
