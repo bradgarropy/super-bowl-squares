@@ -24,6 +24,7 @@ const gameIds = [
     "401872924",
     "401872925",
 ]
+const guestNames = [[], ["Alex"], ["Christine"], [], []]
 
 const main = async () => {
     if (process.env.NODE_ENV === "production") {
@@ -83,12 +84,20 @@ const main = async () => {
         for (const [index, gameId] of gameIds.entries()) {
             const boardId = crypto.randomUUID()
             const boardUsers = seededUsers.slice(0, index + 1)
-            const players = boardUsers.map(user => ({
-                id: crypto.randomUUID(),
-                boardId,
-                userId: user.id,
-                name: user.name,
-            }))
+            const players = [
+                ...boardUsers.map(user => ({
+                    id: crypto.randomUUID(),
+                    boardId,
+                    userId: user.id,
+                    name: user.name,
+                })),
+                ...guestNames[index].map(name => ({
+                    id: crypto.randomUUID(),
+                    boardId,
+                    userId: null,
+                    name,
+                })),
+            ]
 
             await db.batch([
                 db
