@@ -48,6 +48,7 @@ const player = sqliteTable(
             onDelete: "set null",
         }),
         name: text("name").notNull(),
+        inviteTokenHash: text("invite_token_hash"),
         createdAt: text("created_at")
             .default(sql`(current_timestamp)`)
             .notNull(),
@@ -61,6 +62,7 @@ const player = sqliteTable(
             table.boardId,
             table.userId,
         ),
+        uniqueIndex("player_invite_token_hash_idx").on(table.inviteTokenHash),
         index("player_user_id_idx").on(table.userId),
     ],
 )
