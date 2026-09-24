@@ -50,6 +50,13 @@
       "when": 1788816803523,
       "tag": "0006_volatile_redwing",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1790211414891,
+      "tag": "0007_lush_alex_power",
+      "breakpoints": true
     }
   ]
 }
