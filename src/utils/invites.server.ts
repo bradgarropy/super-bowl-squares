@@ -1,52 +1,47 @@
-import {and, eq, isNull} from "drizzle-orm"
+import {env} from "cloudflare:workers"
+import type {JWTPayload} from "jose"
+import {jwtVerify, SignJWT} from "jose"
 
-import type {Database} from "~/db/client.server"
-import {type Board, type Player, player} from "~/db/schema"
+import type {Board, Player} from "~/db/schema"
 
-const toHex = (bytes: Uint8Array) => {
-    const hex = Array.from(bytes, byte =>
-        byte.toString(16).padStart(2, "0"),
-    ).join("")
-
-    return hex
+type InviteTokenPayload = JWTPayload & {
+    boardId: Board["id"]
+    playerId: Player["id"]
 }
 
-const createToken = () => {
-    const token = toHex(crypto.getRandomValues(new Uint8Array(32)))
-    return token
+const getSecret = () => {
+    const secret = env.INVITE_TOKEN_SECRET
+
+    if (!secret) {
+        throw new Error("Invite token secret is required")
+    }
+
+    return new TextEncoder().encode(secret)
 }
 
-const hashToken = async (token: string) => {
-    const digest = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(token),
-    )
+const signToken = async (payload: InviteTokenPayload) => {
+    const signedToken = new SignJWT(payload)
+        .setProtectedHeader({alg: "HS256"})
+        .sign(getSecret())
 
-    const hashedToken = toHex(new Uint8Array(digest))
-    return hashedToken
+    return signedToken
 }
 
-const invitePlayer = async (
-    db: Database,
-    boardId: Board["id"],
-    playerId: Player["id"],
-) => {
-    const token = createToken()
-    const hashedToken = await hashToken(token)
-
-    await db
-        .update(player)
-        .set({inviteTokenHash: hashedToken})
-        .where(
-            and(
-                eq(player.id, playerId),
-                eq(player.boardId, boardId),
-                isNull(player.userId),
-            ),
+const verifyToken = async (
+    token: string,
+): Promise<InviteTokenPayload | null> => {
+    try {
+        const {payload} = await jwtVerify<InviteTokenPayload>(
+            token,
+            getSecret(),
+            {algorithms: ["HS256"]},
         )
-        .run()
 
-    return token
+        return payload
+    } catch {
+        return null
+    }
 }
 
-export {createToken, hashToken, invitePlayer}
+export {signToken, verifyToken}
+export type {InviteTokenPayload}
