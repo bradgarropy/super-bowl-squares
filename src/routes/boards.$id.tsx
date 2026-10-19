@@ -1,15 +1,10 @@
-import {
-    data,
-    Form,
-    Link,
-    redirect,
-    useFetcher,
-    useNavigation,
-} from "react-router"
+import {data, Form, Link, redirect, useNavigation} from "react-router"
 
 import Board from "~/components/Board"
+import InviteButton from "~/components/InviteButton"
 import ShareButton from "~/components/ShareButton"
 import {dbCtx} from "~/db/client.server"
+import type {Player} from "~/db/schema"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
@@ -19,18 +14,32 @@ import {shuffleBoard} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
+const serializePlayer = ({inviteTokenHash, ...player}: Player) => ({
+    ...player,
+    isInvited: inviteTokenHash !== null,
+})
+
 export const loader = async ({context, params, request}: Route.LoaderArgs) => {
     const user = await getUser(request)
     const db = context.get(dbCtx)
 
-    const board = await getBoard(db, params.id)
+    const savedBoard = await getBoard(db, params.id)
 
-    if (!board) {
+    if (!savedBoard) {
         throw data("Board not found", {status: 404})
     }
 
-    const game = await getGame(board.gameId)
-    const isOwner = user?.id === board.ownerId
+    const game = await getGame(savedBoard.gameId)
+    const isOwner = user?.id === savedBoard.ownerId
+
+    const board = {
+        ...savedBoard,
+        players: savedBoard.players.map(serializePlayer),
+        squares: savedBoard.squares.map(square => ({
+            ...square,
+            player: serializePlayer(square.player),
+        })),
+    }
 
     return {board, game, isOwner}
 }
@@ -74,12 +83,15 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         }
 
         const token = await invitePlayer(db, board.id, selectedPlayer.id)
-        const inviteUrl = new URL(
-            `/boards/${board.id}/invites/${token}`,
-            request.url,
-        ).toString()
 
-        console.log("Invite URL", inviteUrl)
+        if (!token) {
+            return data(
+                {error: "This player is no longer available to invite."},
+                {status: 409},
+            )
+        }
+
+        const inviteUrl = new URL(`/invites/${token}`, request.url).toString()
 
         return {inviteUrl}
     }
@@ -162,7 +174,6 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 
 const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
     const {board, game, isOwner} = loaderData
-    const inviteFetcher = useFetcher<typeof action>()
     const navigation = useNavigation()
     const isLocked = game.state !== "pre"
     const isSubmitting = navigation.state === "submitting"
@@ -268,34 +279,12 @@ const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {
                                 {isOwner ? (
                                     <div className="flex items-center gap-2">
                                         {!player.userId ? (
-                                            <inviteFetcher.Form method="post">
-                                                <input
-                                                    type="hidden"
-                                                    name="intent"
-                                                    value="invite"
-                                                />
-                                                <input
-                                                    type="hidden"
-                                                    name="playerId"
-                                                    value={player.id}
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={
-                                                        inviteFetcher.state !==
-                                                        "idle"
-                                                    }
-                                                    className="rounded bg-white/20 px-3 py-1 disabled:cursor-not-allowed disabled:opacity-50"
-                                                >
-                                                    {inviteFetcher.state !==
-                                                        "idle" &&
-                                                    inviteFetcher.formData?.get(
-                                                        "playerId",
-                                                    ) === player.id
-                                                        ? "Inviting…"
-                                                        : "Invite"}
-                                                </button>
-                                            </inviteFetcher.Form>
+                                            <InviteButton
+                                                action={`/boards/${board.id}`}
+                                                isInvited={player.isInvited}
+                                                player={player}
+                                                title={game.name}
+                                            />
                                         ) : null}
 
                                         {player.userId !== board.ownerId ? (

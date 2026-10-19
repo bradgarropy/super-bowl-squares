@@ -12,7 +12,7 @@ import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
-import {invitePlayer as invitePlayerRecord} from "~/utils/invites.server"
+import {invitePlayer} from "~/utils/invites.server"
 import {
     addPlayer as addPlayerRecord,
     removePlayer as removePlayerRecord,
@@ -38,7 +38,10 @@ vi.mock("~/utils/players.server", () => ({
 vi.mock("~/utils/squares.server", () => ({shuffleBoard: vi.fn()}))
 vi.mock("~/components/Board", () => ({default: () => <div>Game board</div>}))
 
-afterEach(cleanup)
+afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+})
 
 const db = createDb({} as Env["DB"])
 const context = new RouterContextProvider()
@@ -89,6 +92,23 @@ const board = {
     ],
 }
 
+const serializePlayer = ({
+    inviteTokenHash,
+    ...player
+}: (typeof board.players)[number]) => ({
+    ...player,
+    isInvited: inviteTokenHash !== null,
+})
+
+const visibleBoard = {
+    ...board,
+    players: board.players.map(serializePlayer),
+    squares: board.squares.map(square => ({
+        ...square,
+        player: serializePlayer(square.player),
+    })),
+}
+
 const team = {
     id: "team-1",
     name: "Team",
@@ -132,7 +152,7 @@ beforeEach(() => {
     vi.mocked(getBoard).mockResolvedValue(board)
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
-    vi.mocked(invitePlayerRecord).mockResolvedValue("invite-token")
+    vi.mocked(invitePlayer).mockResolvedValue("invite-token")
     vi.mocked(addPlayerRecord).mockResolvedValue([
         {} as D1Result,
         {} as D1Result,
@@ -148,8 +168,8 @@ test("loads players and squares and identifies the owner", async () => {
     const result = await loadBoard()
 
     expect(getBoard).toHaveBeenCalledExactlyOnceWith(db, board.id)
-    expect(result.board.players).toEqual(board.players)
-    expect(result.board.squares).toEqual(board.squares)
+    expect(result.board.players).toEqual(visibleBoard.players)
+    expect(result.board.squares).toEqual(visibleBoard.squares)
     expect(result.isOwner).toBe(true)
     expect(getGame).toHaveBeenCalledExactlyOnceWith(board.gameId)
 })
@@ -166,7 +186,7 @@ test("allows signed-out visitors to load a board as a non-owner", async () => {
 
     const result = await loadBoard()
 
-    expect(result.board).toEqual(board)
+    expect(result.board).toEqual(visibleBoard)
     expect(result.isOwner).toBe(false)
     expect(requireUser).not.toHaveBeenCalled()
 })
@@ -183,19 +203,19 @@ test("allows other users to load a board as a non-owner", async () => {
 
     const result = await loadBoard()
 
-    expect(result.board).toEqual(board)
+    expect(result.board).toEqual(visibleBoard)
     expect(result.isOwner).toBe(false)
 })
 
 const renderBoard = (
-    players = board.players,
+    players = visibleBoard.players,
     state: GameDetails["state"] = "pre",
     error?: string,
     isOwner = true,
 ) => {
     const props = {
         loaderData: {
-            board: {...board, players},
+            board: {...visibleBoard, players},
             game: {...game, state},
             isOwner,
         },
@@ -207,7 +227,6 @@ const renderBoard = (
             {
                 path: "/boards/:id",
                 element: <BoardRoute {...props} />,
-                action: () => ({inviteUrl: "https://example.com/invite"}),
             },
         ],
         {initialEntries: [`/boards/${board.id}`]},
@@ -225,7 +244,7 @@ test("shows names for both account holders and guests", () => {
 })
 
 test("shows the board and players without management controls to non-owners", () => {
-    renderBoard(board.players, "pre", undefined, false)
+    renderBoard(visibleBoard.players, "pre", undefined, false)
 
     expect(screen.getByText("Game board")).toBeInTheDocument()
     expect(screen.getByText("Owner")).toBeInTheDocument()
@@ -269,7 +288,7 @@ test("enables the add-player form before kickoff", () => {
 })
 
 test.each(["in", "post"] as const)("disables the form for %s games", state => {
-    renderBoard(board.players, state)
+    renderBoard(visibleBoard.players, state)
     expect(
         screen.queryByRole("button", {name: "Shuffle squares"}),
     ).not.toBeInTheDocument()
@@ -285,7 +304,7 @@ test.each(["in", "post"] as const)("disables the form for %s games", state => {
 })
 
 test("displays action errors", () => {
-    renderBoard(board.players, "pre", "Player name is required.")
+    renderBoard(visibleBoard.players, "pre", "Player name is required.")
     expect(screen.getByRole("alert")).toHaveTextContent(
         "Player name is required.",
     )
@@ -304,59 +323,6 @@ const addPlayer = (
         url: new URL(`https://example.com/boards/${board.id}`),
         pattern: "/boards/:id",
     })
-
-const invitePlayer = (playerId = "player-2") =>
-    addPlayer(new URLSearchParams({intent: "invite", playerId}))
-
-test("creates a fresh invitation for an unclaimed player", async () => {
-    const log = vi.spyOn(console, "log").mockImplementation(() => {})
-    const response = await invitePlayer()
-    const inviteUrl = `https://example.com/boards/${board.id}/invites/invite-token`
-
-    expect(invitePlayerRecord).toHaveBeenCalledExactlyOnceWith(
-        db,
-        board.id,
-        "player-2",
-    )
-    expect(response).toEqual({inviteUrl})
-    expect(log).toHaveBeenCalledExactlyOnceWith("Invite URL", inviteUrl)
-    log.mockRestore()
-})
-
-test.each(["in", "post"] as const)(
-    "allows invitations while the game is %s",
-    async state => {
-        vi.mocked(getGame).mockResolvedValue({...game, state})
-
-        await invitePlayer()
-
-        expect(invitePlayerRecord).toHaveBeenCalledExactlyOnceWith(
-            db,
-            board.id,
-            "player-2",
-        )
-        expect(getGame).not.toHaveBeenCalled()
-    },
-)
-
-test("rejects invitations without a player ID", async () => {
-    expect(await invitePlayer("")).toMatchObject({init: {status: 400}})
-    expect(invitePlayerRecord).not.toHaveBeenCalled()
-})
-
-test("rejects invitations for a player outside the board", async () => {
-    expect(await invitePlayer("other-player")).toMatchObject({
-        init: {status: 404},
-    })
-    expect(invitePlayerRecord).not.toHaveBeenCalled()
-})
-
-test("rejects invitations for a claimed player", async () => {
-    expect(await invitePlayer("player-1")).toMatchObject({
-        init: {status: 409},
-    })
-    expect(invitePlayerRecord).not.toHaveBeenCalled()
-})
 
 test("adds a trimmed guest name to the owned board and redirects", async () => {
     const response = await addPlayer()
@@ -437,6 +403,44 @@ test("does not redirect when the insert fails", async () => {
         new Error("Database unavailable"),
     )
     await expect(addPlayer()).rejects.toThrow()
+})
+
+const invite = (playerId = "player-2") =>
+    addPlayer(new URLSearchParams({intent: "invite", playerId}))
+
+test("creates an invitation for an unclaimed player", async () => {
+    expect(await invite()).toEqual({
+        inviteUrl: "https://example.com/invites/invite-token",
+    })
+    expect(invitePlayer).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        "player-2",
+    )
+})
+
+test("rejects an invitation when the guarded update no longer matches", async () => {
+    vi.mocked(invitePlayer).mockResolvedValueOnce(null)
+
+    expect(await invite()).toMatchObject({
+        data: {error: "This player is no longer available to invite."},
+        init: {status: 409},
+    })
+})
+
+test("rejects invitations for missing or claimed players", async () => {
+    expect(await invite("missing-player")).toMatchObject({
+        init: {status: 404},
+    })
+    expect(await invite("player-1")).toMatchObject({
+        init: {status: 409},
+    })
+    expect(invitePlayer).not.toHaveBeenCalled()
+})
+
+test("rejects invitations without a player ID", async () => {
+    expect(await invite("")).toMatchObject({init: {status: 400}})
+    expect(invitePlayer).not.toHaveBeenCalled()
 })
 
 test("shuffles every player on the owned board and redirects", async () => {
