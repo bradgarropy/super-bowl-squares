@@ -48,6 +48,7 @@ const player = sqliteTable(
             onDelete: "set null",
         }),
         name: text("name").notNull(),
+        inviteTokenHash: text("invite_token_hash"),
         createdAt: text("created_at")
             .default(sql`(current_timestamp)`)
             .notNull(),
@@ -61,6 +62,7 @@ const player = sqliteTable(
             table.boardId,
             table.userId,
         ),
+        uniqueIndex("player_invite_token_hash_idx").on(table.inviteTokenHash),
         index("player_user_id_idx").on(table.userId),
     ],
 )
@@ -117,5 +119,13 @@ const squareRelations = relations(square, ({one}) => ({
     }),
 }))
 
+type Board = typeof board.$inferSelect
+type Player = typeof player.$inferSelect
+type Square = typeof square.$inferSelect
+type NewBoard = typeof board.$inferInsert
+type NewPlayer = typeof player.$inferInsert
+type NewSquare = typeof square.$inferInsert
+
 export * from "~/db/auth"
 export {board, boardRelations, player, playerRelations, square, squareRelations}
+export type {Board, NewBoard, NewPlayer, NewSquare, Player, Square}

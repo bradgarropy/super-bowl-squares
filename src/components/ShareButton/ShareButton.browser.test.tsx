@@ -36,6 +36,10 @@ test("opens the native share sheet when available", async () => {
         })
     })
     expect(writeText).not.toHaveBeenCalled()
+    expect(screen.getByRole("button", {name: "Share board"})).toHaveClass(
+        "px-4",
+        "py-2",
+    )
 })
 
 test("copies the welcome link when native sharing is unavailable", async () => {

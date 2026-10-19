@@ -1,3 +1,4 @@
+import type {Player, Square} from "~/db/schema"
 import {cn} from "~/utils/cn"
 import type {Game} from "~/utils/games"
 
@@ -12,12 +13,8 @@ type GridProps = {
     } | null
 }
 
-type GridSquare = {
-    row: number
-    column: number
-    player: {
-        name: string
-    }
+type GridSquare = Pick<Square, "row" | "column"> & {
+    player: Pick<Player, "name">
 }
 
 const Grid = ({squares, teams, winner}: GridProps) => {

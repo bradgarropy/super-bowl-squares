@@ -1,17 +1,16 @@
 import {eq} from "drizzle-orm"
 import type {BatchItem} from "drizzle-orm/batch"
 
-import type {createDb} from "~/db/client.server"
-import {square} from "~/db/schema"
+import type {Database} from "~/db/client.server"
+import {type Board, type Player, square} from "~/db/schema"
 import {assignSquares} from "~/utils/assign"
 
-type Database = ReturnType<typeof createDb>
 type Query = BatchItem<"sqlite">
 
 const createShuffleQueries = (
     db: Database,
-    boardId: string,
-    playerIds: string[],
+    boardId: Board["id"],
+    playerIds: Player["id"][],
 ): [Query, ...Query[]] => {
     const assignments = assignSquares(playerIds)
     const deleteSquares = db.delete(square).where(eq(square.boardId, boardId))
@@ -34,7 +33,11 @@ const createShuffleQueries = (
     ]
 }
 
-const shuffleBoard = (db: Database, boardId: string, playerIds: string[]) => {
+const shuffleBoard = (
+    db: Database,
+    boardId: Board["id"],
+    playerIds: Player["id"][],
+) => {
     return db.batch(createShuffleQueries(db, boardId, playerIds))
 }
 

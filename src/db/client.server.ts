@@ -5,6 +5,9 @@ import * as schema from "~/db/schema"
 
 const createDb = (binding: Env["DB"]) => drizzle(binding, {schema})
 
-const dbCtx = createContext<ReturnType<typeof createDb>>()
+type Database = ReturnType<typeof createDb>
+
+const dbCtx = createContext<Database>()
 
 export {createDb, dbCtx}
+export type {Database}

@@ -1,8 +1,7 @@
-import type {createDb} from "~/db/client.server"
+import type {Database} from "~/db/client.server"
+import type {Board} from "~/db/schema"
 
-type Database = ReturnType<typeof createDb>
-
-const getBoard = (db: Database, boardId: string) => {
+const getBoard = (db: Database, boardId: Board["id"]) => {
     const board = db.query.board.findFirst({
         where: (board, {eq}) => eq(board.id, boardId),
         with: {
@@ -25,7 +24,11 @@ const getBoard = (db: Database, boardId: string) => {
     return board
 }
 
-const getUserBoard = (db: Database, boardId: string, userId: string) => {
+const getUserBoard = (
+    db: Database,
+    boardId: Board["id"],
+    userId: NonNullable<Board["ownerId"]>,
+) => {
     const board = db.query.board.findFirst({
         where: (board, {and, eq}) =>
             and(eq(board.id, boardId), eq(board.ownerId, userId)),
@@ -49,7 +52,7 @@ const getUserBoard = (db: Database, boardId: string, userId: string) => {
     return board
 }
 
-const getUserBoards = (db: Database, userId: string) => {
+const getUserBoards = (db: Database, userId: NonNullable<Board["ownerId"]>) => {
     const boards = db.query.board.findMany({
         where: (board, {eq}) => eq(board.ownerId, userId),
         orderBy: (board, {desc}) => desc(board.createdAt),
