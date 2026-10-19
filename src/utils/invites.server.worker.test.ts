@@ -1,7 +1,13 @@
 import {expect, test, vi} from "vitest"
 
+import type {Database} from "~/db/client.server"
 import {player} from "~/db/schema"
-import {createToken, hashToken, invitePlayer} from "~/utils/invites.server"
+import {
+    createToken,
+    getInvitedPlayer,
+    hashToken,
+    invitePlayer,
+} from "~/utils/invites.server"
 
 test("creates a URL-safe token with 256 bits of randomness", () => {
     expect(createToken()).toMatch(/^[0-9a-f]{64}$/)
@@ -47,4 +53,33 @@ test("does not return a token when the player was not updated", async () => {
     const token = await invitePlayer({update} as never, "board-1", "player-1")
 
     expect(token).toBeNull()
+})
+
+test("loads the unclaimed player and board for an invitation token", async () => {
+    const invitedPlayer = {id: "player-1"}
+    const findFirst = vi.fn().mockResolvedValue(invitedPlayer)
+    const db = {
+        query: {player: {findFirst}},
+    } as unknown as Database
+
+    const result = await getInvitedPlayer(db, "invite-token")
+
+    expect(result).toBe(invitedPlayer)
+    expect(findFirst).toHaveBeenCalledExactlyOnceWith({
+        where: expect.any(Function),
+        with: {
+            board: {
+                with: {owner: true},
+            },
+        },
+    })
+})
+
+test("returns undefined when an invitation does not match an unclaimed player", async () => {
+    const findFirst = vi.fn().mockResolvedValue(undefined)
+    const db = {
+        query: {player: {findFirst}},
+    } as unknown as Database
+
+    expect(await getInvitedPlayer(db, "invalid-token")).toBeUndefined()
 })

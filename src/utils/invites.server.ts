@@ -50,4 +50,23 @@ const invitePlayer = async (
     return invitedPlayer ? token : null
 }
 
-export {createToken, hashToken, invitePlayer}
+const getInvitedPlayer = async (db: Database, token: string) => {
+    const inviteTokenHash = await hashToken(token)
+
+    const invitedPlayer = db.query.player.findFirst({
+        where: (player, {and, eq, isNull}) =>
+            and(
+                eq(player.inviteTokenHash, inviteTokenHash),
+                isNull(player.userId),
+            ),
+        with: {
+            board: {
+                with: {owner: true},
+            },
+        },
+    })
+
+    return invitedPlayer
+}
+
+export {createToken, getInvitedPlayer, hashToken, invitePlayer}
