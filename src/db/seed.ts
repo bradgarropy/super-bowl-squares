@@ -22,7 +22,7 @@ const gameIds = [
     "401872924",
     "401872925",
 ]
-const guestNames = [[], ["Alex"], ["Christine"], [], []]
+const guestNames = [[], ["Matt"], ["Yarib"], [], []]
 
 const main = async () => {
     if (process.env.NODE_ENV === "production") {
