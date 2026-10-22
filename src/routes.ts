@@ -9,6 +9,7 @@ const routes: RouteConfig = [
     route("boards/:id/welcome", "routes/boards.$id.welcome.tsx"),
     route("boards/:id", "routes/boards.$id.tsx"),
     route("games", "routes/games.tsx"),
+    route("invites/:token", "routes/invites.$token.tsx"),
     route("login", "routes/login.tsx"),
     route("logout", "routes/logout.tsx"),
     route("signup", "routes/signup.tsx"),

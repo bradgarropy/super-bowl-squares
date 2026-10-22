@@ -1,5 +1,5 @@
 import type {Database} from "~/db/client.server"
-import type {Board} from "~/db/schema"
+import type {Board, User} from "~/db/schema"
 
 const getBoard = (db: Database, boardId: Board["id"]) => {
     const board = db.query.board.findFirst({
@@ -27,7 +27,7 @@ const getBoard = (db: Database, boardId: Board["id"]) => {
 const getUserBoard = (
     db: Database,
     boardId: Board["id"],
-    userId: NonNullable<Board["ownerId"]>,
+    userId: User["id"],
 ) => {
     const board = db.query.board.findFirst({
         where: (board, {and, eq}) =>
@@ -52,7 +52,7 @@ const getUserBoard = (
     return board
 }
 
-const getUserBoards = (db: Database, userId: NonNullable<Board["ownerId"]>) => {
+const getUserBoards = (db: Database, userId: User["id"]) => {
     const boards = db.query.board.findMany({
         where: (board, {eq}) => eq(board.ownerId, userId),
         orderBy: (board, {desc}) => desc(board.createdAt),
@@ -61,4 +61,18 @@ const getUserBoards = (db: Database, userId: NonNullable<Board["ownerId"]>) => {
     return boards
 }
 
-export {getBoard, getUserBoard, getUserBoards}
+const getJoinedBoards = async (db: Database, userId: User["id"]) => {
+    const memberships = await db.query.player.findMany({
+        where: (player, {eq}) => eq(player.userId, userId),
+        with: {board: true},
+    })
+
+    const boards = memberships
+        .map(membership => membership.board)
+        .filter(board => board.ownerId !== userId)
+        .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+
+    return boards
+}
+
+export {getBoard, getJoinedBoards, getUserBoard, getUserBoards}
