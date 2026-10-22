@@ -69,4 +69,57 @@ const getInvitedPlayer = async (db: Database, token: string) => {
     return invitedPlayer
 }
 
-export {createToken, getInvitedPlayer, hashToken, invitePlayer}
+const claimPlayer = async (
+    db: Database,
+    token: string,
+    userId: NonNullable<Player["userId"]>,
+) => {
+    const inviteTokenHash = await hashToken(token)
+
+    const invitedPlayer = await db.query.player.findFirst({
+        columns: {boardId: true, id: true},
+        where: (player, {and, eq, isNull}) =>
+            and(
+                eq(player.inviteTokenHash, inviteTokenHash),
+                isNull(player.userId),
+            ),
+    })
+
+    if (!invitedPlayer) {
+        return {status: "invalid"} as const
+    }
+
+    const existingPlayer = await db.query.player.findFirst({
+        columns: {id: true},
+        where: (player, {and, eq}) =>
+            and(
+                eq(player.boardId, invitedPlayer.boardId),
+                eq(player.userId, userId),
+            ),
+    })
+
+    if (existingPlayer) {
+        return {status: "already-claimed"} as const
+    }
+
+    const claimedPlayer = await db
+        .update(player)
+        .set({inviteTokenHash: null, userId})
+        .where(
+            and(
+                eq(player.id, invitedPlayer.id),
+                eq(player.inviteTokenHash, inviteTokenHash),
+                isNull(player.userId),
+            ),
+        )
+        .returning({boardId: player.boardId})
+        .get()
+
+    if (!claimedPlayer) {
+        return {status: "invalid"} as const
+    }
+
+    return {boardId: claimedPlayer.boardId, status: "claimed"} as const
+}
+
+export {claimPlayer, createToken, getInvitedPlayer, hashToken, invitePlayer}

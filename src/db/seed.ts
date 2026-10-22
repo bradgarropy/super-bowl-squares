@@ -9,13 +9,11 @@ import * as schema from "~/db/schema"
 import {shuffleBoard} from "~/utils/squares.server"
 
 const password = "password"
-const testEmail = "test@example.com"
 const users = [
-    {name: "Test User", email: testEmail},
-    {name: "Patrick Mahomes", email: "patrick@example.com"},
-    {name: "Jalen Hurts", email: "jalen@example.com"},
-    {name: "Josh Allen", email: "josh@example.com"},
-    {name: "Lamar Jackson", email: "lamar@example.com"},
+    {name: "Brad", email: "brad@gmail.com"},
+    {name: "Gaby", email: "gaby@gmail.com"},
+    {name: "Sofi", email: "sofi@gmail.com"},
+    {name: "Juju", email: "juju@gmail.com"},
 ]
 const gameIds = [
     "401873302",
@@ -116,8 +114,9 @@ const main = async () => {
         await db.batch([db.delete(session), db.delete(rateLimit)])
 
         console.log(`Seeded ${users.length} users in local D1`)
-        console.log(`Seeded ${gameIds.length} boards with 1–5 players`)
-        console.log(`Login with ${testEmail} / ${password}`)
+        console.log(`Seeded ${gameIds.length} boards owned by ${owner.name}`)
+        console.log(`All seeded users have the password: ${password}`)
+        console.table(users)
     } finally {
         await platform.dispose()
     }
