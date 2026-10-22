@@ -1,5 +1,8 @@
 type EspnGameState = "pre" | "in" | "post"
 
+const ESPN_API_URL =
+    "https://site.api.espn.com/apis/site/v2/sports/football/nfl"
+
 type EspnStatus = {
     type: {
         name: string
@@ -71,9 +74,7 @@ type EspnSummary = {
 }
 
 const getScoreboard = async (year: number): Promise<EspnScoreboard> => {
-    const url = new URL(
-        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
-    )
+    const url = new URL(`${ESPN_API_URL}/scoreboard`)
 
     url.searchParams.set("dates", String(year))
     url.searchParams.set("limit", "1000")
@@ -88,9 +89,7 @@ const getScoreboard = async (year: number): Promise<EspnScoreboard> => {
 }
 
 const getSummary = async (id: string): Promise<EspnSummary> => {
-    const url = new URL(
-        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary",
-    )
+    const url = new URL(`${ESPN_API_URL}/summary`)
 
     url.searchParams.set("event", id)
 
