@@ -38,7 +38,7 @@ test("returns the scoreboard response without transforming it", async () => {
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.origin + url.pathname).toBe(
-        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
+        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard",
     )
     expect(url.searchParams.get("dates")).toBe("2026")
     expect(url.searchParams.get("limit")).toBe("1000")
@@ -57,7 +57,7 @@ test("returns the summary response without transforming it", async () => {
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.origin + url.pathname).toBe(
-        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary",
+        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary",
     )
     expect(url.searchParams.get("event")).toBe("401874048")
 })

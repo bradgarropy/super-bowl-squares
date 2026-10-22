@@ -240,7 +240,7 @@ test("gets game details with cumulative scores at the end of each quarter", asyn
 
     const url = new URL(String(fetchMock.mock.calls[0][0]))
     expect(url.origin + url.pathname).toBe(
-        "https://site.web.api.espn.com/apis/site/v2/sports/football/nfl/summary",
+        "https://site.api.espn.com/apis/site/v2/sports/football/nfl/summary",
     )
     expect(url.searchParams.get("event")).toBe("401874048")
 })
