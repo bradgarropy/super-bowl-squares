@@ -5,7 +5,7 @@ import {invite, player} from "~/db/schema"
 import {
     claimPlayer,
     createToken,
-    getInvitedPlayer,
+    getInvitation,
     hashToken,
     invitePlayer,
 } from "~/utils/invites.server"
@@ -142,20 +142,21 @@ test("does not create an invitation for an unavailable player", async () => {
     expect(insert).not.toHaveBeenCalled()
 })
 
-test("loads the unclaimed player and board for an invitation token", async () => {
+test("loads an invitation with its player and board", async () => {
     const invitedPlayer = {
         board: {id: "board-1"},
         id: "player-1",
         userId: null,
     }
-    const findFirst = vi.fn().mockResolvedValue({player: invitedPlayer})
+    const invitation = {claimedAt: null, player: invitedPlayer}
+    const findFirst = vi.fn().mockResolvedValue(invitation)
     const db = {
         query: {invite: {findFirst}},
     } as unknown as Database
 
-    const result = await getInvitedPlayer(db, "invite-token")
+    const result = await getInvitation(db, "invite-token")
 
-    expect(result).toBe(invitedPlayer)
+    expect(result).toBe(invitation)
     expect(findFirst).toHaveBeenCalledExactlyOnceWith({
         where: expect.any(Function),
         with: {
@@ -170,17 +171,23 @@ test("loads the unclaimed player and board for an invitation token", async () =>
     })
 })
 
-test("returns null when an invitation is missing or its player is claimed", async () => {
+test("loads claimed invitations and returns null when one is missing", async () => {
+    const claimedInvitation = {
+        claimedAt: "2026-10-26 12:00:00",
+        player: {userId: "user-1"},
+    }
     const findFirst = vi
         .fn()
+        .mockResolvedValueOnce(claimedInvitation)
         .mockResolvedValueOnce(undefined)
-        .mockResolvedValueOnce({player: {userId: "user-1"}})
     const db = {
         query: {invite: {findFirst}},
     } as unknown as Database
 
-    await expect(getInvitedPlayer(db, "missing-token")).resolves.toBeNull()
-    await expect(getInvitedPlayer(db, "claimed-token")).resolves.toBeNull()
+    await expect(getInvitation(db, "claimed-token")).resolves.toBe(
+        claimedInvitation,
+    )
+    await expect(getInvitation(db, "missing-token")).resolves.toBeNull()
 })
 
 test("claims the invited player and invitation atomically", async () => {

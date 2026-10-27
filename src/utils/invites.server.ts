@@ -64,12 +64,11 @@ const invitePlayer = async (
     return token
 }
 
-const getInvitedPlayer = async (db: Database, token: string) => {
+const getInvitation = async (db: Database, token: string) => {
     const hashedToken = await hashToken(token)
 
     const invitation = await db.query.invite.findFirst({
-        where: (invite, {and, eq, isNull}) =>
-            and(eq(invite.tokenHash, hashedToken), isNull(invite.claimedAt)),
+        where: (invite, {eq}) => eq(invite.tokenHash, hashedToken),
         with: {
             player: {
                 with: {
@@ -85,11 +84,7 @@ const getInvitedPlayer = async (db: Database, token: string) => {
         return null
     }
 
-    if (invitation.player.userId) {
-        return null
-    }
-
-    return invitation.player
+    return invitation
 }
 
 const claimPlayer = async (
@@ -177,4 +172,4 @@ const claimPlayer = async (
     return {boardId: claimedPlayer.boardId, status: "claimed"} as const
 }
 
-export {claimPlayer, createToken, getInvitedPlayer, hashToken, invitePlayer}
+export {claimPlayer, createToken, getInvitation, hashToken, invitePlayer}

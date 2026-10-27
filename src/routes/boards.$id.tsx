@@ -18,7 +18,7 @@ type PlayerWithInvite = Player & {invite: Invite | null}
 
 const serializePlayer = ({invite, ...player}: PlayerWithInvite) => ({
     ...player,
-    isInvited: invite !== null,
+    isInvited: invite?.claimedAt === null,
 })
 
 export const loader = async ({context, params, request}: Route.LoaderArgs) => {

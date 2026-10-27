@@ -7,6 +7,7 @@ import {
 import {afterEach, beforeEach, expect, test, vi} from "vitest"
 
 import {createDb, dbCtx} from "~/db/client.server"
+import type {Invite, Player} from "~/db/schema"
 import BoardRoute, {action, loader} from "~/routes/boards.$id"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
@@ -95,9 +96,9 @@ const board = {
 const serializePlayer = ({
     invite,
     ...player
-}: (typeof board.players)[number]) => ({
+}: Player & {invite: Invite | null}) => ({
     ...player,
-    isInvited: invite !== null,
+    isInvited: invite?.claimedAt === null,
 })
 
 const visibleBoard = {
