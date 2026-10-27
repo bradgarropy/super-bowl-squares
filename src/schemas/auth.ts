@@ -4,7 +4,9 @@ import {redirectToSchema} from "~/schemas/redirect"
 
 const loginFormSchema = z.object({
     email: z.email({error: "A valid email is required."}),
-    password: z.string().min(1, "Password is required."),
+    password: z
+        .string({error: "Password is required."})
+        .min(1, "Password is required."),
     redirectTo: redirectToSchema,
 })
 
