@@ -87,6 +87,31 @@ const getInvitation = async (db: Database, token: string) => {
     return invitation
 }
 
+const revokeInvitation = async (
+    db: Database,
+    boardId: Board["id"],
+    playerId: Player["id"],
+) => {
+    const unclaimedPlayer = db
+        .select({id: player.id})
+        .from(player)
+        .where(
+            and(
+                eq(player.id, playerId),
+                eq(player.boardId, boardId),
+                isNull(player.userId),
+            ),
+        )
+
+    const revokedInvitation = await db
+        .delete(invite)
+        .where(and(eq(invite.playerId, playerId), exists(unclaimedPlayer)))
+        .returning({id: invite.id})
+        .get()
+
+    return Boolean(revokedInvitation)
+}
+
 const claimPlayer = async (
     db: Database,
     token: string,
@@ -172,4 +197,11 @@ const claimPlayer = async (
     return {boardId: claimedPlayer.boardId, status: "claimed"} as const
 }
 
-export {claimPlayer, createToken, getInvitation, hashToken, invitePlayer}
+export {
+    claimPlayer,
+    createToken,
+    getInvitation,
+    hashToken,
+    invitePlayer,
+    revokeInvitation,
+}

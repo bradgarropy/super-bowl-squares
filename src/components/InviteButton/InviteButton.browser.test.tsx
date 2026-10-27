@@ -14,7 +14,7 @@ import {afterEach, expect, test, vi} from "vitest"
 
 import InviteButton from "~/components/InviteButton"
 
-type InviteResponse = {error: string} | {inviteUrl: string}
+type InviteResponse = {error: string} | {inviteUrl: string} | {revoked: true}
 
 afterEach(() => {
     cleanup()
@@ -102,8 +102,16 @@ test("shows invitation generation errors", async () => {
     )
 })
 
-test("disables invitations that were previously generated", () => {
-    const action = vi.fn()
+test("revokes invitations that were previously generated", async () => {
+    let resolveAction: (value: InviteResponse) => void = () => {}
+    let submittedData: Record<string, FormDataEntryValue> = {}
+    const action: ActionFunction = async ({request}) => {
+        submittedData = Object.fromEntries(await request.formData())
+
+        return new Promise<InviteResponse>(resolve => {
+            resolveAction = resolve
+        })
+    }
     const router = createMemoryRouter(
         [
             {
@@ -123,8 +131,22 @@ test("disables invitations that were previously generated", () => {
     )
     render(<RouterProvider router={router} />)
 
-    fireEvent.click(screen.getByRole("button", {name: "Invited"}))
-
     expect(screen.getByRole("button", {name: "Invited"})).toBeDisabled()
-    expect(action).not.toHaveBeenCalled()
+
+    fireEvent.click(screen.getByRole("button", {name: "Revoke"}))
+
+    expect(
+        await screen.findByRole("button", {name: "Revoking…"}),
+    ).toBeDisabled()
+
+    expect(submittedData).toEqual({
+        intent: "revoke-invite",
+        playerId: "player-1",
+    })
+
+    resolveAction({revoked: true})
+
+    await waitFor(() => {
+        expect(screen.getByRole("button", {name: "Revoke"})).toBeEnabled()
+    })
 })

@@ -13,7 +13,7 @@ import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
-import {invitePlayer} from "~/utils/invites.server"
+import {invitePlayer, revokeInvitation} from "~/utils/invites.server"
 import {
     addPlayer as addPlayerRecord,
     removePlayer as removePlayerRecord,
@@ -31,7 +31,10 @@ vi.mock("~/utils/boards.server", () => ({
     getUserBoard: vi.fn(),
 }))
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
-vi.mock("~/utils/invites.server", () => ({invitePlayer: vi.fn()}))
+vi.mock("~/utils/invites.server", () => ({
+    invitePlayer: vi.fn(),
+    revokeInvitation: vi.fn(),
+}))
 vi.mock("~/utils/players.server", () => ({
     addPlayer: vi.fn(),
     removePlayer: vi.fn(),
@@ -154,6 +157,7 @@ beforeEach(() => {
     vi.mocked(getUserBoard).mockResolvedValue(board)
     vi.mocked(getGame).mockResolvedValue(game)
     vi.mocked(invitePlayer).mockResolvedValue("invite-token")
+    vi.mocked(revokeInvitation).mockResolvedValue(true)
     vi.mocked(addPlayerRecord).mockResolvedValue([
         {} as D1Result,
         {} as D1Result,
@@ -442,6 +446,34 @@ test("rejects invitations for missing or claimed players", async () => {
 test("rejects invitations without a player ID", async () => {
     expect(await invite("")).toMatchObject({init: {status: 400}})
     expect(invitePlayer).not.toHaveBeenCalled()
+})
+
+const revokeInvite = (playerId = "player-2") =>
+    addPlayer(new URLSearchParams({intent: "revoke-invite", playerId}))
+
+test("revokes an invitation for an unclaimed player", async () => {
+    expect(await revokeInvite()).toEqual({revoked: true})
+    expect(revokeInvitation).toHaveBeenCalledExactlyOnceWith(
+        db,
+        board.id,
+        "player-2",
+    )
+})
+
+test("rejects revocation when the invitation is no longer available", async () => {
+    vi.mocked(revokeInvitation).mockResolvedValueOnce(false)
+
+    expect(await revokeInvite()).toMatchObject({
+        data: {error: "This invitation is no longer available to revoke."},
+        init: {status: 409},
+    })
+})
+
+test("rejects revocation for a missing player", async () => {
+    expect(await revokeInvite("missing-player")).toMatchObject({
+        init: {status: 404},
+    })
+    expect(revokeInvitation).not.toHaveBeenCalled()
 })
 
 test("shuffles every player on the owned board and redirects", async () => {

@@ -8,7 +8,7 @@ import type {Invite, Player} from "~/db/schema"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
-import {invitePlayer} from "~/utils/invites.server"
+import {invitePlayer, revokeInvitation} from "~/utils/invites.server"
 import {addPlayer, removePlayer} from "~/utils/players.server"
 import {shuffleBoard} from "~/utils/squares.server"
 
@@ -96,6 +96,33 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         const inviteUrl = new URL(`/invites/${token}`, request.url).toString()
 
         return {inviteUrl}
+    }
+
+    if (intent === "revoke-invite") {
+        const playerId = formData.get("playerId")
+
+        if (typeof playerId !== "string" || !playerId) {
+            return data({error: "Player is required."}, {status: 400})
+        }
+
+        const selectedPlayer = board.players.find(
+            player => player.id === playerId,
+        )
+
+        if (!selectedPlayer) {
+            return data({error: "Player not found."}, {status: 404})
+        }
+
+        const revoked = await revokeInvitation(db, board.id, selectedPlayer.id)
+
+        if (!revoked) {
+            return data(
+                {error: "This invitation is no longer available to revoke."},
+                {status: 409},
+            )
+        }
+
+        return {revoked: true} as const
     }
 
     const game = await getGame(board.gameId)

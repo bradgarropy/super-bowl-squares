@@ -8,6 +8,7 @@ import {
     getInvitation,
     hashToken,
     invitePlayer,
+    revokeInvitation,
 } from "~/utils/invites.server"
 
 const createInviteDb = ({
@@ -188,6 +189,83 @@ test("loads claimed invitations and returns null when one is missing", async () 
         claimedInvitation,
     )
     await expect(getInvitation(db, "missing-token")).resolves.toBeNull()
+})
+
+test("revokes an unclaimed player's invitation", async () => {
+    const unclaimedPlayer = {type: "unclaimed-player"}
+    const selectWhere = vi.fn(() => unclaimedPlayer)
+    const from = vi.fn(() => ({where: selectWhere}))
+    const select = vi.fn(() => ({from}))
+
+    const get = vi.fn().mockResolvedValue({id: "invite-1"})
+    const returning = vi.fn(() => ({get}))
+    const deleteWhere = vi.fn(() => ({returning}))
+    const deleteInvitation = vi.fn(() => ({where: deleteWhere}))
+    const db = {
+        delete: deleteInvitation,
+        select,
+    } as unknown as Database
+
+    await expect(revokeInvitation(db, "board-1", "player-1")).resolves.toBe(
+        true,
+    )
+    expect(select).toHaveBeenCalledExactlyOnceWith({id: player.id})
+    expect(from).toHaveBeenCalledExactlyOnceWith(player)
+    expect(deleteInvitation).toHaveBeenCalledExactlyOnceWith(invite)
+    expect(deleteWhere).toHaveBeenCalledTimes(1)
+    expect(returning).toHaveBeenCalledExactlyOnceWith({id: invite.id})
+    expect(get).toHaveBeenCalledTimes(1)
+})
+
+test("returns false when no invitation can be revoked", async () => {
+    const selectWhere = vi.fn(() => ({type: "unclaimed-player"}))
+    const from = vi.fn(() => ({where: selectWhere}))
+    const select = vi.fn(() => ({from}))
+    const get = vi.fn().mockResolvedValue(undefined)
+    const returning = vi.fn(() => ({get}))
+    const deleteWhere = vi.fn(() => ({returning}))
+    const deleteInvitation = vi.fn(() => ({where: deleteWhere}))
+    const db = {
+        delete: deleteInvitation,
+        select,
+    } as unknown as Database
+
+    await expect(revokeInvitation(db, "board-1", "player-1")).resolves.toBe(
+        false,
+    )
+})
+
+test("a revoked invitation token no longer resolves", async () => {
+    const invitation = {
+        claimedAt: null,
+        id: "invite-1",
+        player: {board: {id: "board-1"}, id: "player-1", userId: null},
+    }
+    let isActive = true
+    const findFirst = vi.fn(() =>
+        Promise.resolve(isActive ? invitation : undefined),
+    )
+    const selectWhere = vi.fn(() => ({type: "unclaimed-player"}))
+    const from = vi.fn(() => ({where: selectWhere}))
+    const select = vi.fn(() => ({from}))
+    const get = vi.fn(() => {
+        isActive = false
+        return Promise.resolve({id: invitation.id})
+    })
+    const returning = vi.fn(() => ({get}))
+    const deleteWhere = vi.fn(() => ({returning}))
+    const deleteInvitation = vi.fn(() => ({where: deleteWhere}))
+    const db = {
+        delete: deleteInvitation,
+        query: {invite: {findFirst}},
+        select,
+    } as unknown as Database
+
+    await expect(getInvitation(db, "invite-token")).resolves.toBe(invitation)
+    await expect(revokeInvitation(db, "board-1", "player-1")).resolves.toBe(
+        true,
+    )
+    await expect(getInvitation(db, "invite-token")).resolves.toBeNull()
 })
 
 test("claims the invited player and invitation atomically", async () => {

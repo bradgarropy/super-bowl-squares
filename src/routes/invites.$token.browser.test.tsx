@@ -148,7 +148,7 @@ test("uses a generic inviter when the board owner is unavailable", async () => {
     expect(await loadInvite()).toMatchObject({inviterName: "Someone"})
 })
 
-test("returns a generic 404 for an invalid invitation", async () => {
+test("returns a generic 404 for an invalid or revoked invitation", async () => {
     vi.mocked(getInvitation).mockResolvedValueOnce(null)
 
     await expect(loadInvite()).rejects.toMatchObject({init: {status: 404}})
