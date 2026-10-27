@@ -59,7 +59,6 @@ const board = {
             boardId: "board-1",
             userId: "owner-1",
             name: "Owner",
-            inviteTokenHash: null,
             invite: null,
             createdAt: "2026-09-02 12:00:00",
             updatedAt: "2026-09-02 12:00:00",
@@ -69,7 +68,6 @@ const board = {
             boardId: "board-1",
             userId: null,
             name: "Alex",
-            inviteTokenHash: null,
             invite: null,
             createdAt: "2026-09-02 12:00:00",
             updatedAt: "2026-09-02 12:00:00",
@@ -86,7 +84,6 @@ const board = {
                 boardId: "board-1",
                 userId: "owner-1",
                 name: "Owner",
-                inviteTokenHash: null,
                 invite: null,
                 createdAt: "2026-09-02 12:00:00",
                 updatedAt: "2026-09-02 12:00:00",
@@ -97,7 +94,6 @@ const board = {
 
 const serializePlayer = ({
     invite,
-    inviteTokenHash,
     ...player
 }: (typeof board.players)[number]) => ({
     ...player,

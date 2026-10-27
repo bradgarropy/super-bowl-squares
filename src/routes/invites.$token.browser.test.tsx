@@ -46,7 +46,6 @@ const invitedPlayer = {
     boardId: "board-1",
     userId: null,
     name: "Alex",
-    inviteTokenHash: "stored-hash",
     createdAt: "2026-09-02 12:00:00",
     updatedAt: "2026-09-02 12:00:00",
     board: {

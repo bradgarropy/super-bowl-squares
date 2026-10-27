@@ -64,6 +64,13 @@
       "when": 1793060124639,
       "tag": "0008_neat_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793061786783,
+      "tag": "0009_skinny_maverick",
+      "breakpoints": true
     }
   ]
 }

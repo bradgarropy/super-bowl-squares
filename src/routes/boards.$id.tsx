@@ -16,11 +16,7 @@ import type {Route} from "./+types/boards.$id"
 
 type PlayerWithInvite = Player & {invite: Invite | null}
 
-const serializePlayer = ({
-    invite,
-    inviteTokenHash,
-    ...player
-}: PlayerWithInvite) => ({
+const serializePlayer = ({invite, ...player}: PlayerWithInvite) => ({
     ...player,
     isInvited: invite !== null,
 })
