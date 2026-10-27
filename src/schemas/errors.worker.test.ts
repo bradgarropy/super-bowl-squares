@@ -1,5 +1,5 @@
 import {expect, test} from "vitest"
-import {z,ZodError} from "zod"
+import {z, ZodError} from "zod"
 
 import {getErrorMessage} from "~/schemas/errors"
 

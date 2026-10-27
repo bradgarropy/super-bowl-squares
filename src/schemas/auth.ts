@@ -12,12 +12,20 @@ const loginFormSchema = z.object({
 
 const signupFormSchema = z
     .object({
-        firstName: z.string().trim().min(1, "First name is required."),
-        lastName: z.string().trim().min(1, "Last name is required."),
+        firstName: z
+            .string({error: "First name is required."})
+            .trim()
+            .min(1, "First name is required."),
+        lastName: z
+            .string({error: "Last name is required."})
+            .trim()
+            .min(1, "Last name is required."),
         email: z.email({error: "A valid email is required."}),
-        password: z.string().min(1, "Password is required."),
+        password: z
+            .string({error: "Password is required."})
+            .min(1, "Password is required."),
         passwordConfirmation: z
-            .string()
+            .string({error: "Password confirmation is required."})
             .min(1, "Password confirmation is required."),
         redirectTo: redirectToSchema,
     })

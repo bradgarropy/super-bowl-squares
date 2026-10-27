@@ -7,26 +7,22 @@ import {
     useSearchParams,
 } from "react-router"
 
+import {signupFormSchema} from "~/schemas/auth"
+import {getErrorMessage} from "~/schemas/errors"
+import {redirectToSchema} from "~/schemas/redirect"
 import {auth} from "~/utils/auth.server"
-import {getRedirectTo} from "~/utils/redirect"
 
 import type {Route} from "./+types/signup"
 
 export const action = async ({request}: Route.ActionArgs) => {
     const formData = await request.formData()
+    const result = signupFormSchema.safeParse(Object.fromEntries(formData))
 
-    const firstName = String(formData.get("firstName") ?? "")
-    const lastName = String(formData.get("lastName") ?? "")
-    const email = String(formData.get("email") ?? "")
-    const password = String(formData.get("password") ?? "")
-    const passwordConfirmation = String(
-        formData.get("passwordConfirmation") ?? "",
-    )
-    const redirectTo = getRedirectTo(formData.get("redirectTo"))
-
-    if (password !== passwordConfirmation) {
-        return data({error: "Passwords do not match."}, {status: 400})
+    if (!result.success) {
+        return data({error: getErrorMessage(result.error)}, {status: 400})
     }
+
+    const {email, firstName, lastName, password, redirectTo} = result.data
 
     try {
         const {headers} = await auth.api.signUpEmail({
@@ -55,7 +51,7 @@ export const action = async ({request}: Route.ActionArgs) => {
 const Signup = () => {
     const actionData = useActionData<typeof action>()
     const [searchParams] = useSearchParams()
-    const redirectTo = searchParams.get("redirectTo") ?? "/boards"
+    const redirectTo = redirectToSchema.parse(searchParams.get("redirectTo"))
 
     return (
         <div className="max-w-lg mx-auto">

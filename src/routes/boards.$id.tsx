@@ -5,6 +5,8 @@ import InviteButton from "~/components/InviteButton"
 import ShareButton from "~/components/ShareButton"
 import {dbCtx} from "~/db/client.server"
 import type {Invite, Player} from "~/db/schema"
+import {boardActionSchema} from "~/schemas/boards"
+import {getErrorMessage} from "~/schemas/errors"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
@@ -60,17 +62,17 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
     }
 
     const formData = await request.formData()
-    const intent = formData.get("intent")
+    const result = boardActionSchema.safeParse(Object.fromEntries(formData))
 
-    if (intent === "invite") {
-        const playerId = formData.get("playerId")
+    if (!result.success) {
+        return data({error: getErrorMessage(result.error)}, {status: 400})
+    }
 
-        if (typeof playerId !== "string" || !playerId) {
-            return data({error: "Player is required."}, {status: 400})
-        }
+    const boardAction = result.data
 
+    if (boardAction.intent === "invite") {
         const selectedPlayer = board.players.find(
-            player => player.id === playerId,
+            player => player.id === boardAction.playerId,
         )
 
         if (!selectedPlayer) {
@@ -98,15 +100,9 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         return {inviteUrl}
     }
 
-    if (intent === "revoke-invite") {
-        const playerId = formData.get("playerId")
-
-        if (typeof playerId !== "string" || !playerId) {
-            return data({error: "Player is required."}, {status: 400})
-        }
-
+    if (boardAction.intent === "revoke-invite") {
         const selectedPlayer = board.players.find(
-            player => player.id === playerId,
+            player => player.id === boardAction.playerId,
         )
 
         if (!selectedPlayer) {
@@ -134,7 +130,7 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         )
     }
 
-    if (intent === "shuffle") {
+    if (boardAction.intent === "shuffle") {
         await shuffleBoard(
             db,
             board.id,
@@ -144,21 +140,7 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
         return redirect(`/boards/${board.id}`)
     }
 
-    if (intent === "add") {
-        const value = formData.get("name")
-        const name = typeof value === "string" ? value.trim() : ""
-
-        if (!name) {
-            return data({error: "Player name is required."}, {status: 400})
-        }
-
-        if (name.length > 100) {
-            return data(
-                {error: "Player name must be 100 characters or fewer."},
-                {status: 400},
-            )
-        }
-
+    if (boardAction.intent === "add") {
         if (board.players.length >= 100) {
             return data(
                 {error: "A board cannot have more than 100 players."},
@@ -166,20 +148,14 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             )
         }
 
-        await addPlayer(db, board, name)
+        await addPlayer(db, board, boardAction.name)
 
         return redirect(`/boards/${board.id}`)
     }
 
-    if (intent === "remove") {
-        const playerId = formData.get("playerId")
-
-        if (typeof playerId !== "string" || !playerId) {
-            return data({error: "Player is required."}, {status: 400})
-        }
-
+    if (boardAction.intent === "remove") {
         const selectedPlayer = board.players.find(
-            player => player.id === playerId,
+            player => player.id === boardAction.playerId,
         )
 
         if (!selectedPlayer) {
@@ -193,12 +169,10 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
             )
         }
 
-        await removePlayer(db, board, playerId)
+        await removePlayer(db, board, boardAction.playerId)
 
         return redirect(`/boards/${board.id}`)
     }
-
-    return data({error: "Invalid action."}, {status: 400})
 }
 
 const BoardRoute = ({loaderData, actionData}: Route.ComponentProps) => {

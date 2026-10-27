@@ -144,6 +144,12 @@ test("rejects a missing game ID without writing records", async () => {
     expect(batch).not.toHaveBeenCalled()
 })
 
+test("trims a submitted game ID", async () => {
+    await submit(` ${game.id} `)
+
+    expect(getGame).toHaveBeenCalledExactlyOnceWith(game.id)
+})
+
 test.each(["in", "post"] as const)(
     "rejects a game in the %s state without writing records",
     async state => {

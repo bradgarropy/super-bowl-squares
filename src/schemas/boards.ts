@@ -1,6 +1,8 @@
 import {z} from "zod"
 
-const playerIdSchema = z.string().min(1, "Player is required.")
+const playerIdSchema = z
+    .string({error: "Player is required."})
+    .min(1, "Player is required.")
 
 const invitePlayerSchema = z.object({
     intent: z.literal("invite"),
@@ -19,7 +21,7 @@ const shuffleBoardSchema = z.object({
 const addPlayerSchema = z.object({
     intent: z.literal("add"),
     name: z
-        .string()
+        .string({error: "Player name is required."})
         .trim()
         .min(1, "Player name is required.")
         .max(100, "Player name must be 100 characters or fewer."),
@@ -30,13 +32,17 @@ const removePlayerSchema = z.object({
     playerId: playerIdSchema,
 })
 
-const boardActionSchema = z.discriminatedUnion("intent", [
-    invitePlayerSchema,
-    revokeInvitationSchema,
-    shuffleBoardSchema,
-    addPlayerSchema,
-    removePlayerSchema,
-])
+const boardActionSchema = z.discriminatedUnion(
+    "intent",
+    [
+        invitePlayerSchema,
+        revokeInvitationSchema,
+        shuffleBoardSchema,
+        addPlayerSchema,
+        removePlayerSchema,
+    ],
+    {error: "Invalid action."},
+)
 
 type BoardAction = z.infer<typeof boardActionSchema>
 
