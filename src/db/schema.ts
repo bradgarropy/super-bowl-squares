@@ -48,7 +48,6 @@ const player = sqliteTable(
             onDelete: "set null",
         }),
         name: text("name").notNull(),
-        inviteTokenHash: text("invite_token_hash"),
         createdAt: text("created_at")
             .default(sql`(current_timestamp)`)
             .notNull(),
@@ -62,8 +61,32 @@ const player = sqliteTable(
             table.boardId,
             table.userId,
         ),
-        uniqueIndex("player_invite_token_hash_idx").on(table.inviteTokenHash),
         index("player_user_id_idx").on(table.userId),
+    ],
+)
+
+const invite = sqliteTable(
+    "invite",
+    {
+        id: text("id")
+            .primaryKey()
+            .$defaultFn(() => crypto.randomUUID()),
+        playerId: text("player_id")
+            .notNull()
+            .references(() => player.id, {onDelete: "cascade"}),
+        tokenHash: text("token_hash").notNull(),
+        claimedAt: text("claimed_at"),
+        createdAt: text("created_at")
+            .default(sql`(current_timestamp)`)
+            .notNull(),
+        updatedAt: text("updated_at")
+            .default(sql`(current_timestamp)`)
+            .$onUpdate(() => sql`(current_timestamp)`)
+            .notNull(),
+    },
+    table => [
+        uniqueIndex("invite_player_id_idx").on(table.playerId),
+        uniqueIndex("invite_token_hash_idx").on(table.tokenHash),
     ],
 )
 
@@ -101,11 +124,19 @@ const playerRelations = relations(player, ({one, many}) => ({
         fields: [player.boardId],
         references: [board.id],
     }),
+    invite: one(invite),
     user: one(user, {
         fields: [player.userId],
         references: [user.id],
     }),
     squares: many(square),
+}))
+
+const inviteRelations = relations(invite, ({one}) => ({
+    player: one(player, {
+        fields: [invite.playerId],
+        references: [player.id],
+    }),
 }))
 
 const squareRelations = relations(square, ({one}) => ({
@@ -120,13 +151,34 @@ const squareRelations = relations(square, ({one}) => ({
 }))
 
 type Board = typeof board.$inferSelect
+type Invite = typeof invite.$inferSelect
 type Player = typeof player.$inferSelect
 type Square = typeof square.$inferSelect
 type User = typeof user.$inferSelect
 type NewBoard = typeof board.$inferInsert
+type NewInvite = typeof invite.$inferInsert
 type NewPlayer = typeof player.$inferInsert
 type NewSquare = typeof square.$inferInsert
 
 export * from "~/db/auth"
-export {board, boardRelations, player, playerRelations, square, squareRelations}
-export type {Board, NewBoard, NewPlayer, NewSquare, Player, Square, User}
+export {
+    board,
+    boardRelations,
+    invite,
+    inviteRelations,
+    player,
+    playerRelations,
+    square,
+    squareRelations,
+}
+export type {
+    Board,
+    Invite,
+    NewBoard,
+    NewInvite,
+    NewPlayer,
+    NewSquare,
+    Player,
+    Square,
+    User,
+}

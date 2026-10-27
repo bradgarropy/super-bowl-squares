@@ -14,10 +14,17 @@ test("loads a board with its players and assigned squares", () => {
     expect(findFirst).toHaveBeenCalledExactlyOnceWith({
         where: expect.any(Function),
         with: {
-            players: {orderBy: expect.any(Function)},
+            players: {
+                orderBy: expect.any(Function),
+                with: {invite: true},
+            },
             squares: {
                 orderBy: expect.any(Function),
-                with: {player: true},
+                with: {
+                    player: {
+                        with: {invite: true},
+                    },
+                },
             },
         },
     })
@@ -34,10 +41,17 @@ test("loads a board without restricting it to an owner", () => {
     expect(findFirst).toHaveBeenCalledExactlyOnceWith({
         where: expect.any(Function),
         with: {
-            players: {orderBy: expect.any(Function)},
+            players: {
+                orderBy: expect.any(Function),
+                with: {invite: true},
+            },
             squares: {
                 orderBy: expect.any(Function),
-                with: {player: true},
+                with: {
+                    player: {
+                        with: {invite: true},
+                    },
+                },
             },
         },
     })

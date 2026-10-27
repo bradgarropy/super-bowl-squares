@@ -57,6 +57,20 @@
       "when": 1790211414891,
       "tag": "0007_lush_alex_power",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793060124639,
+      "tag": "0008_neat_leopardon",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793061786783,
+      "tag": "0009_skinny_maverick",
+      "breakpoints": true
     }
   ]
 }

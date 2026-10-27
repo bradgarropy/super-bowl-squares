@@ -1,7 +1,7 @@
-import {and, eq, isNull} from "drizzle-orm"
+import {and, eq, exists, isNull, sql} from "drizzle-orm"
 
 import type {Database} from "~/db/client.server"
-import {type Board, type Player, player} from "~/db/schema"
+import {type Board, invite, type Player, player} from "~/db/schema"
 
 const toHex = (bytes: Uint8Array) => {
     const hex = Array.from(bytes, byte =>
@@ -34,9 +34,67 @@ const invitePlayer = async (
     const token = createToken()
     const hashedToken = await hashToken(token)
 
-    const invitedPlayer = await db
-        .update(player)
-        .set({inviteTokenHash: hashedToken})
+    const invitedPlayer = await db.query.player.findFirst({
+        columns: {id: true},
+        where: (player, {and, eq, isNull}) =>
+            and(
+                eq(player.id, playerId),
+                eq(player.boardId, boardId),
+                isNull(player.userId),
+            ),
+    })
+
+    if (!invitedPlayer) {
+        return null
+    }
+
+    await db
+        .insert(invite)
+        .values({playerId: invitedPlayer.id, tokenHash: hashedToken})
+        .onConflictDoUpdate({
+            target: invite.playerId,
+            set: {
+                claimedAt: null,
+                tokenHash: hashedToken,
+                updatedAt: sql`(current_timestamp)`,
+            },
+        })
+        .run()
+
+    return token
+}
+
+const getInvitation = async (db: Database, token: string) => {
+    const hashedToken = await hashToken(token)
+
+    const invitation = await db.query.invite.findFirst({
+        where: (invite, {eq}) => eq(invite.tokenHash, hashedToken),
+        with: {
+            player: {
+                with: {
+                    board: {
+                        with: {owner: true},
+                    },
+                },
+            },
+        },
+    })
+
+    if (!invitation) {
+        return null
+    }
+
+    return invitation
+}
+
+const revokeInvitation = async (
+    db: Database,
+    boardId: Board["id"],
+    playerId: Player["id"],
+) => {
+    const unclaimedPlayer = db
+        .select({id: player.id})
+        .from(player)
         .where(
             and(
                 eq(player.id, playerId),
@@ -44,29 +102,14 @@ const invitePlayer = async (
                 isNull(player.userId),
             ),
         )
-        .returning({id: player.id})
+
+    const revokedInvitation = await db
+        .delete(invite)
+        .where(and(eq(invite.playerId, playerId), exists(unclaimedPlayer)))
+        .returning({id: invite.id})
         .get()
 
-    return invitedPlayer ? token : null
-}
-
-const getInvitedPlayer = async (db: Database, token: string) => {
-    const inviteTokenHash = await hashToken(token)
-
-    const invitedPlayer = db.query.player.findFirst({
-        where: (player, {and, eq, isNull}) =>
-            and(
-                eq(player.inviteTokenHash, inviteTokenHash),
-                isNull(player.userId),
-            ),
-        with: {
-            board: {
-                with: {owner: true},
-            },
-        },
-    })
-
-    return invitedPlayer
+    return Boolean(revokedInvitation)
 }
 
 const claimPlayer = async (
@@ -74,18 +117,20 @@ const claimPlayer = async (
     token: string,
     userId: NonNullable<Player["userId"]>,
 ) => {
-    const inviteTokenHash = await hashToken(token)
+    const hashedToken = await hashToken(token)
 
-    const invitedPlayer = await db.query.player.findFirst({
-        columns: {boardId: true, id: true},
-        where: (player, {and, eq, isNull}) =>
-            and(
-                eq(player.inviteTokenHash, inviteTokenHash),
-                isNull(player.userId),
-            ),
+    const invitation = await db.query.invite.findFirst({
+        columns: {id: true, playerId: true},
+        where: (invite, {and, eq, isNull}) =>
+            and(eq(invite.tokenHash, hashedToken), isNull(invite.claimedAt)),
+        with: {
+            player: {
+                columns: {boardId: true, userId: true},
+            },
+        },
     })
 
-    if (!invitedPlayer) {
+    if (!invitation || invitation.player.userId) {
         return {status: "invalid"} as const
     }
 
@@ -93,7 +138,7 @@ const claimPlayer = async (
         columns: {id: true},
         where: (player, {and, eq}) =>
             and(
-                eq(player.boardId, invitedPlayer.boardId),
+                eq(player.boardId, invitation.player.boardId),
                 eq(player.userId, userId),
             ),
     })
@@ -102,24 +147,61 @@ const claimPlayer = async (
         return {status: "already-claimed"} as const
     }
 
-    const claimedPlayer = await db
-        .update(player)
-        .set({inviteTokenHash: null, userId})
+    const activeInvitation = db
+        .select({id: invite.id})
+        .from(invite)
         .where(
             and(
-                eq(player.id, invitedPlayer.id),
-                eq(player.inviteTokenHash, inviteTokenHash),
+                eq(invite.id, invitation.id),
+                eq(invite.tokenHash, hashedToken),
+                isNull(invite.claimedAt),
+            ),
+        )
+
+    const claimPlayerQuery = db
+        .update(player)
+        .set({userId})
+        .where(
+            and(
+                eq(player.id, invitation.playerId),
                 isNull(player.userId),
+                exists(activeInvitation),
             ),
         )
         .returning({boardId: player.boardId})
-        .get()
 
-    if (!claimedPlayer) {
+    const claimInviteQuery = db
+        .update(invite)
+        .set({claimedAt: sql`(current_timestamp)`})
+        .where(
+            and(
+                eq(invite.id, invitation.id),
+                eq(invite.tokenHash, hashedToken),
+                isNull(invite.claimedAt),
+            ),
+        )
+        .returning({id: invite.id})
+
+    const [claimedPlayers, claimedInvites] = await db.batch([
+        claimPlayerQuery,
+        claimInviteQuery,
+    ])
+
+    const claimedPlayer = claimedPlayers[0]
+    const claimedInvite = claimedInvites[0]
+
+    if (!claimedPlayer || !claimedInvite) {
         return {status: "invalid"} as const
     }
 
     return {boardId: claimedPlayer.boardId, status: "claimed"} as const
 }
 
-export {claimPlayer, createToken, getInvitedPlayer, hashToken, invitePlayer}
+export {
+    claimPlayer,
+    createToken,
+    getInvitation,
+    hashToken,
+    invitePlayer,
+    revokeInvitation,
+}

@@ -4,23 +4,25 @@ import Scoreboard from "~/components/Scoreboard"
 import {dbCtx} from "~/db/client.server"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getGame} from "~/utils/games"
-import {claimPlayer, getInvitedPlayer} from "~/utils/invites.server"
+import {claimPlayer, getInvitation} from "~/utils/invites.server"
 
 import type {Route} from "./+types/invites.$token"
 
 export const loader = async ({context, params, request}: Route.LoaderArgs) => {
     const db = context.get(dbCtx)
 
-    const [invitedPlayer, user] = await Promise.all([
-        getInvitedPlayer(db, params.token),
+    const [invitation, user] = await Promise.all([
+        getInvitation(db, params.token),
         getUser(request),
     ])
 
-    if (!invitedPlayer) {
+    if (!invitation) {
         throw data("Invitation not found", {status: 404})
     }
 
+    const invitedPlayer = invitation.player
     const game = await getGame(invitedPlayer.board.gameId)
+    const status = invitation.claimedAt ? "claimed" : "active"
 
     return {
         boardPath: `/boards/${invitedPlayer.boardId}`,
@@ -28,6 +30,7 @@ export const loader = async ({context, params, request}: Route.LoaderArgs) => {
         inviterName: invitedPlayer.board.owner?.name ?? "Someone",
         isSignedIn: Boolean(user),
         playerName: invitedPlayer.name,
+        status,
     }
 }
 
@@ -55,26 +58,32 @@ export const action = async ({context, params, request}: Route.ActionArgs) => {
 }
 
 const Invite = ({actionData, loaderData, params}: Route.ComponentProps) => {
-    const {game, inviterName, isSignedIn, playerName} = loaderData
+    const {boardPath, game, inviterName, isSignedIn, playerName, status} =
+        loaderData
 
     const navigation = useNavigation()
 
     const invitePath = `/invites/${params.token}`
     const redirectTo = encodeURIComponent(invitePath)
+    const isClaimed = status === "claimed"
     const isClaiming = navigation.state === "submitting"
 
     return (
         <main className="mx-auto flex max-w-3xl flex-col items-center gap-8 text-center">
             <header className="space-y-3">
                 <p className="text-sm font-semibold tracking-wide text-gray-300 uppercase">
-                    You&apos;ve been invited
+                    {isClaimed
+                        ? "Invitation claimed"
+                        : "You&apos;ve been invited"}
                 </p>
 
                 <h1 className="text-3xl font-bold">
-                    {inviterName} invited you to play as {playerName}
+                    {isClaimed
+                        ? "This invitation has already been claimed."
+                        : `${inviterName} invited you to play as ${playerName}`}
                 </h1>
 
-                {!isSignedIn ? (
+                {!isClaimed && !isSignedIn ? (
                     <p className="text-gray-300">
                         Create an account or sign in to connect these squares to
                         you.
@@ -89,7 +98,14 @@ const Invite = ({actionData, loaderData, params}: Route.ComponentProps) => {
                 <Scoreboard game={game} />
             </section>
 
-            {!isSignedIn ? (
+            {isClaimed ? (
+                <Link
+                    to={boardPath}
+                    className="rounded bg-white px-4 py-2 font-semibold text-green-800"
+                >
+                    View board
+                </Link>
+            ) : !isSignedIn ? (
                 <div className="flex flex-wrap justify-center gap-3">
                     <Link
                         to={`/signup?redirectTo=${redirectTo}`}

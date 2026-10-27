@@ -11,7 +11,7 @@ import Invite, {action, loader} from "~/routes/invites.$token"
 import {getUser, requireUser} from "~/utils/auth.server"
 import type {GameDetails} from "~/utils/games"
 import {getGame} from "~/utils/games"
-import {claimPlayer, getInvitedPlayer} from "~/utils/invites.server"
+import {claimPlayer, getInvitation} from "~/utils/invites.server"
 
 import type {Route} from "./+types/invites.$token"
 
@@ -22,7 +22,7 @@ vi.mock("~/utils/auth.server", () => ({
 vi.mock("~/utils/games", () => ({getGame: vi.fn()}))
 vi.mock("~/utils/invites.server", () => ({
     claimPlayer: vi.fn(),
-    getInvitedPlayer: vi.fn(),
+    getInvitation: vi.fn(),
 }))
 
 afterEach(cleanup)
@@ -46,7 +46,6 @@ const invitedPlayer = {
     boardId: "board-1",
     userId: null,
     name: "Alex",
-    inviteTokenHash: "stored-hash",
     createdAt: "2026-09-02 12:00:00",
     updatedAt: "2026-09-02 12:00:00",
     board: {
@@ -57,6 +56,16 @@ const invitedPlayer = {
         updatedAt: "2026-09-02 12:00:00",
         owner,
     },
+}
+
+const invitation = {
+    id: "invite-1",
+    playerId: invitedPlayer.id,
+    tokenHash: "stored-hash",
+    claimedAt: null,
+    createdAt: "2026-09-02 12:00:00",
+    updatedAt: "2026-09-02 12:00:00",
+    player: invitedPlayer,
 }
 
 const team = {
@@ -89,7 +98,7 @@ const loadInvite = () =>
     })
 
 beforeEach(() => {
-    vi.mocked(getInvitedPlayer).mockResolvedValue(invitedPlayer)
+    vi.mocked(getInvitation).mockResolvedValue(invitation)
     vi.mocked(getUser).mockResolvedValue(null)
     vi.mocked(requireUser).mockResolvedValue(owner)
     vi.mocked(getGame).mockResolvedValue(game)
@@ -106,8 +115,9 @@ test("loads a valid invitation without requiring authentication", async () => {
         inviterName: "Brad",
         isSignedIn: false,
         playerName: "Alex",
+        status: "active",
     })
-    expect(getInvitedPlayer).toHaveBeenCalledExactlyOnceWith(db, "raw-token")
+    expect(getInvitation).toHaveBeenCalledExactlyOnceWith(db, "raw-token")
     expect(getGame).toHaveBeenCalledExactlyOnceWith("game-1")
 })
 
@@ -117,17 +127,29 @@ test("identifies signed-in visitors", async () => {
     expect(await loadInvite()).toMatchObject({isSignedIn: true})
 })
 
+test("identifies claimed invitations", async () => {
+    vi.mocked(getInvitation).mockResolvedValueOnce({
+        ...invitation,
+        claimedAt: "2026-10-26 12:00:00",
+    })
+
+    expect(await loadInvite()).toMatchObject({status: "claimed"})
+})
+
 test("uses a generic inviter when the board owner is unavailable", async () => {
-    vi.mocked(getInvitedPlayer).mockResolvedValueOnce({
-        ...invitedPlayer,
-        board: {...invitedPlayer.board, owner: null},
+    vi.mocked(getInvitation).mockResolvedValueOnce({
+        ...invitation,
+        player: {
+            ...invitedPlayer,
+            board: {...invitedPlayer.board, owner: null},
+        },
     })
 
     expect(await loadInvite()).toMatchObject({inviterName: "Someone"})
 })
 
-test("returns a generic 404 for an invalid invitation", async () => {
-    vi.mocked(getInvitedPlayer).mockResolvedValueOnce(undefined)
+test("returns a generic 404 for an invalid or revoked invitation", async () => {
+    vi.mocked(getInvitation).mockResolvedValueOnce(null)
 
     await expect(loadInvite()).rejects.toMatchObject({init: {status: 404}})
     expect(getGame).not.toHaveBeenCalled()
@@ -170,7 +192,10 @@ test("rejects an invalid or already claimed invitation", async () => {
     await expect(claimInvite()).resolves.toMatchObject({init: {status: 409}})
 })
 
-const renderInvite = (isSignedIn = false) => {
+const renderInvite = (
+    isSignedIn = false,
+    status: "active" | "claimed" = "active",
+) => {
     const props = {
         loaderData: {
             boardPath: "/boards/board-1",
@@ -178,6 +203,7 @@ const renderInvite = (isSignedIn = false) => {
             inviterName: "Brad",
             isSignedIn,
             playerName: "Alex",
+            status,
         },
         params: {token: "raw-token"},
     } as Route.ComponentProps
@@ -234,4 +260,24 @@ test("presents signed-in visitors with the claim action", () => {
             "Claim Alex to connect these squares to your account.",
         ),
     ).toBeInTheDocument()
+})
+
+test("presents claimed invitations with a link to the board", () => {
+    renderInvite(false, "claimed")
+
+    expect(
+        screen.getByRole("heading", {
+            name: "This invitation has already been claimed.",
+        }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("link", {name: "View board"})).toHaveAttribute(
+        "href",
+        "/boards/board-1",
+    )
+    expect(
+        screen.queryByRole("link", {name: "Create account"}),
+    ).not.toBeInTheDocument()
+    expect(
+        screen.queryByRole("button", {name: /Claim/}),
+    ).not.toBeInTheDocument()
 })
