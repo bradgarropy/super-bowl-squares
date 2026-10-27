@@ -3,6 +3,8 @@ import {data, Form, redirect, useActionData} from "react-router"
 import DateTime from "~/components/DateTime"
 import {dbCtx} from "~/db/client.server"
 import {board, player} from "~/db/schema"
+import {getErrorMessage} from "~/schemas/errors"
+import {createBoardSchema} from "~/schemas/games"
 import {requireUser} from "~/utils/auth.server"
 import {getGame, getGames} from "~/utils/games"
 import {createShuffleQueries} from "~/utils/squares.server"
@@ -22,12 +24,13 @@ export const loader = async () => {
 export const action = async ({context, request}: Route.ActionArgs) => {
     const user = await requireUser(request)
     const formData = await request.formData()
-    const gameId = String(formData.get("gameId") ?? "")
+    const result = createBoardSchema.safeParse(Object.fromEntries(formData))
 
-    if (!gameId) {
-        return data({error: "Game is required."}, {status: 400})
+    if (!result.success) {
+        return data({error: getErrorMessage(result.error)}, {status: 400})
     }
 
+    const {gameId} = result.data
     const game = await getGame(gameId)
 
     if (game.state !== "pre") {
