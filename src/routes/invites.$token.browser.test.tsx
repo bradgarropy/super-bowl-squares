@@ -127,7 +127,7 @@ test("uses a generic inviter when the board owner is unavailable", async () => {
 })
 
 test("returns a generic 404 for an invalid invitation", async () => {
-    vi.mocked(getInvitedPlayer).mockResolvedValueOnce(undefined)
+    vi.mocked(getInvitedPlayer).mockResolvedValueOnce(null)
 
     await expect(loadInvite()).rejects.toMatchObject({init: {status: 404}})
     expect(getGame).not.toHaveBeenCalled()

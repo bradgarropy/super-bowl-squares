@@ -10,13 +10,18 @@ const getBoard = (db: Database, boardId: Board["id"]) => {
                     asc(player.createdAt),
                     asc(player.id),
                 ],
+                with: {invite: true},
             },
             squares: {
                 orderBy: (square, {asc}) => [
                     asc(square.row),
                     asc(square.column),
                 ],
-                with: {player: true},
+                with: {
+                    player: {
+                        with: {invite: true},
+                    },
+                },
             },
         },
     })
@@ -38,13 +43,18 @@ const getUserBoard = (
                     asc(player.createdAt),
                     asc(player.id),
                 ],
+                with: {invite: true},
             },
             squares: {
                 orderBy: (square, {asc}) => [
                     asc(square.row),
                     asc(square.column),
                 ],
-                with: {player: true},
+                with: {
+                    player: {
+                        with: {invite: true},
+                    },
+                },
             },
         },
     })

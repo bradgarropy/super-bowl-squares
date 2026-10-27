@@ -4,7 +4,7 @@ import Board from "~/components/Board"
 import InviteButton from "~/components/InviteButton"
 import ShareButton from "~/components/ShareButton"
 import {dbCtx} from "~/db/client.server"
-import type {Player} from "~/db/schema"
+import type {Invite, Player} from "~/db/schema"
 import {getUser, requireUser} from "~/utils/auth.server"
 import {getBoard, getUserBoard} from "~/utils/boards.server"
 import {getGame} from "~/utils/games"
@@ -14,9 +14,15 @@ import {shuffleBoard} from "~/utils/squares.server"
 
 import type {Route} from "./+types/boards.$id"
 
-const serializePlayer = ({inviteTokenHash, ...player}: Player) => ({
+type PlayerWithInvite = Player & {invite: Invite | null}
+
+const serializePlayer = ({
+    invite,
+    inviteTokenHash,
+    ...player
+}: PlayerWithInvite) => ({
     ...player,
-    isInvited: inviteTokenHash !== null,
+    isInvited: invite !== null,
 })
 
 export const loader = async ({context, params, request}: Route.LoaderArgs) => {
