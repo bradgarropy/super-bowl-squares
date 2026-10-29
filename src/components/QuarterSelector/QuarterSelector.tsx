@@ -1,7 +1,19 @@
+import {cn} from "~/utils/cn"
+
 type QuarterSelectorProps = {
     quarters: number[]
     selectedQuarter: number | null
     onSelect: (quarter: number) => void
+}
+
+const formatQuarter = (quarter: number) => {
+    const overtime = quarter - 4
+
+    if (overtime <= 0) {
+        return `Q${quarter}`
+    }
+
+    return overtime === 1 ? "OT" : `OT${overtime}`
 }
 
 const QuarterSelector = ({
@@ -30,7 +42,7 @@ const QuarterSelector = ({
                     )}
                     onClick={() => onSelect(quarter)}
                 >
-                    Q{quarter}
+                    {formatQuarter(quarter)}
                 </button>
             ))}
         </div>
@@ -38,4 +50,3 @@ const QuarterSelector = ({
 }
 
 export default QuarterSelector
-import {cn} from "~/utils/cn"

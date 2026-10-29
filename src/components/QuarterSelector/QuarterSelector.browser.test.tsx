@@ -36,3 +36,18 @@ test("shows the selected quarter and handles another selection", () => {
 
     expect(onSelect).toHaveBeenCalledWith(1)
 })
+
+test("labels overtime periods", () => {
+    render(
+        <QuarterSelector
+            quarters={[4, 5, 6, 7]}
+            selectedQuarter={5}
+            onSelect={() => undefined}
+        />,
+    )
+
+    expect(screen.getByRole("button", {name: "Q4"})).toBeInTheDocument()
+    expect(screen.getByRole("button", {name: "OT"})).toBeInTheDocument()
+    expect(screen.getByRole("button", {name: "OT2"})).toBeInTheDocument()
+    expect(screen.getByRole("button", {name: "OT3"})).toBeInTheDocument()
+})
