@@ -47,8 +47,7 @@ const renderSignup = (url: string) => {
 
 const validSignup = {
     email: "brad@example.com",
-    firstName: " Brad ",
-    lastName: " Garropy ",
+    name: " Brad Garropy ",
     password: "password",
     passwordConfirmation: "password",
     redirectTo: "/boards/board-1",
@@ -72,8 +71,7 @@ test("signs up with validated form data", async () => {
 })
 
 test.each([
-    {field: "firstName", error: "First name is required."},
-    {field: "lastName", error: "Last name is required."},
+    {field: "name", error: "Name is required."},
     {field: "password", error: "Password is required."},
     {
         field: "passwordConfirmation",

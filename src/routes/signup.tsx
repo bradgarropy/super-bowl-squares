@@ -22,13 +22,13 @@ export const action = async ({request}: Route.ActionArgs) => {
         return data({error: getErrorMessage(result.error)}, {status: 400})
     }
 
-    const {email, firstName, lastName, password, redirectTo} = result.data
+    const {email, name, password, redirectTo} = result.data
 
     try {
         const {headers} = await auth.api.signUpEmail({
             body: {
                 email,
-                name: `${firstName} ${lastName}`,
+                name,
                 password,
             },
             headers: request.headers,
@@ -60,31 +60,18 @@ const Signup = () => {
             <Form method="post" className="grid gap-y-4">
                 <input type="hidden" name="redirectTo" value={redirectTo} />
 
-                <fieldset className="grid grid-cols-2 grid-rows-2 gap-x-10">
-                    <div className="grid">
-                        <label htmlFor="firstName">first name</label>
+                <div className="grid">
+                    <label htmlFor="name">name</label>
 
-                        <input
-                            className="bg-white text-black"
-                            type="text"
-                            name="firstName"
-                            id="firstName"
-                            required
-                        />
-                    </div>
-
-                    <div className="grid">
-                        <label htmlFor="lastName">last name</label>
-
-                        <input
-                            className="bg-white text-black"
-                            type="text"
-                            name="lastName"
-                            id="lastName"
-                            required
-                        />
-                    </div>
-                </fieldset>
+                    <input
+                        className="bg-white text-black"
+                        type="text"
+                        name="name"
+                        id="name"
+                        maxLength={100}
+                        required
+                    />
+                </div>
 
                 <div className="grid">
                     <label htmlFor="email">email</label>

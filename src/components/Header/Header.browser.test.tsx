@@ -50,5 +50,9 @@ test("shows a logout button when logged in", () => {
         "href",
         "/boards",
     )
+    expect(screen.getByRole("link", {name: "account"})).toHaveAttribute(
+        "href",
+        "/account",
+    )
     expect(screen.getByRole("button", {name: "logout"})).toBeTruthy()
 })
