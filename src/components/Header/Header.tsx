@@ -16,6 +16,7 @@ const Header = () => {
                 {user ? (
                     <>
                         <Link to="/boards">boards</Link>
+                        <Link to="/account">account</Link>
 
                         <Form method="post" action="/logout">
                             <button type="submit">logout</button>

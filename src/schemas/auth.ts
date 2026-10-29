@@ -12,14 +12,11 @@ const loginFormSchema = z.object({
 
 const signupFormSchema = z
     .object({
-        firstName: z
-            .string({error: "First name is required."})
+        name: z
+            .string({error: "Name is required."})
             .trim()
-            .min(1, "First name is required."),
-        lastName: z
-            .string({error: "Last name is required."})
-            .trim()
-            .min(1, "Last name is required."),
+            .min(1, "Name is required.")
+            .max(100, "Name must be 100 characters or fewer."),
         email: z.email({error: "A valid email is required."}),
         password: z
             .string({error: "Password is required."})
@@ -34,8 +31,41 @@ const signupFormSchema = z
         path: ["passwordConfirmation"],
     })
 
+const updateProfileSchema = z.object({
+    intent: z.literal("profile"),
+    name: z
+        .string({error: "Name is required."})
+        .trim()
+        .min(1, "Name is required.")
+        .max(100, "Name must be 100 characters or fewer."),
+})
+
+const changePasswordSchema = z
+    .object({
+        intent: z.literal("password"),
+        currentPassword: z
+            .string({error: "Current password is required."})
+            .min(1, "Current password is required."),
+        newPassword: z
+            .string({error: "New password is required."})
+            .min(8, "New password must be at least 8 characters."),
+        passwordConfirmation: z
+            .string({error: "Password confirmation is required."})
+            .min(1, "Password confirmation is required."),
+    })
+    .refine(data => data.newPassword === data.passwordConfirmation, {
+        error: "Passwords do not match.",
+        path: ["passwordConfirmation"],
+    })
+
+const accountActionSchema = z.discriminatedUnion("intent", [
+    updateProfileSchema,
+    changePasswordSchema,
+])
+
 type LoginForm = z.infer<typeof loginFormSchema>
 type SignupForm = z.infer<typeof signupFormSchema>
+type AccountAction = z.infer<typeof accountActionSchema>
 
-export {loginFormSchema, signupFormSchema}
-export type {LoginForm, SignupForm}
+export {accountActionSchema, loginFormSchema, signupFormSchema}
+export type {AccountAction, LoginForm, SignupForm}
