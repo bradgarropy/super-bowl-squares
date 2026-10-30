@@ -22,10 +22,11 @@ import {
 type Environment = "local" | "production" | "staging"
 type RemoteEnvironment = Exclude<Environment, "local">
 type HistoricalPlayerInitial = keyof typeof historicalPlayers
+type HistoricalYear = 2020 | 2021 | 2022 | 2023 | 2024 | 2025 | 2026
 type HistoricalBoard = {
     assignments: readonly string[]
     gameId: Board["gameId"]
-    year: number
+    year: HistoricalYear
 }
 type D1DatabaseConfig = {
     binding: string
@@ -40,6 +41,16 @@ const historicalPlayers = {
     M: "Matt",
     Y: "Yarib",
 } as const
+
+const historicalBoardIds = {
+    2020: "795c8ead-4eb5-4228-9873-4f26bed680bf",
+    2021: "eb7d3ba1-85ee-45ed-9c46-c37404ac31e6",
+    2022: "4c966cb1-e2a9-4222-9d03-edbdaa100900",
+    2023: "9e1234a4-92e3-4f2b-8376-fd38db144473",
+    2024: "704b3081-ad4d-416d-8b65-1f0c5720833f",
+    2025: "7198e1b2-b887-414a-bfb1-0ffda7d0cc7e",
+    2026: "0ba42430-0037-496c-9c0e-6e6e3b8abd4b",
+} as const satisfies Record<HistoricalYear, string>
 
 const historicalBoards = [
     {
@@ -162,7 +173,9 @@ const getHistoricalPlayerName = (initial: HistoricalPlayerInitial) => {
     return historicalPlayers[initial]
 }
 
-const getBoardId = (year: number) => `historical-${year}`
+const getBoardId = (year: HistoricalYear) => {
+    return historicalBoardIds[year]
+}
 
 const getPlayerId = (year: number, initial: HistoricalPlayerInitial) => {
     return `historical-${year}-${initial.toLowerCase()}`
